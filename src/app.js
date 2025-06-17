@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import healthCheckRouter from "./routes/healthcheck.routes.js";
 // instiating an app
 const app = express();
@@ -19,5 +20,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 // for serving static files...
 
 app.use(express.static("public"));
+
+app.use(cookieParser());
 
 export { app };
