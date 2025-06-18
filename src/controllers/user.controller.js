@@ -6,3 +6,5 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
     response: new ApiResponse(200, "All working"),
   });
 });
+
+export { registerUser };
