@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import healthCheckRouter from "./routes/healthcheck.routes.js";
 // instiating an app
 const app = express();
 app.use(
@@ -10,7 +9,6 @@ app.use(
     credentials: true,
   })
 );
-app.use("/healthCheck", healthCheckRouter);
 
 // for parsing incoming request body
 app.use(express.json({ limit: "16kb" }));
