@@ -24,8 +24,19 @@ app.use(cookieParser());
 // importing routes...
 
 import userRouter from "./routes/userRoutes.js";
-app.use("/users", userRouter);
 
 // routes declaration
+app.use("/users", userRouter);
+
+// centralised Error-Handling middleware...
+
+app.use((err, req, res, next) => {
+  res.status(err.statusCode || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error!",
+    errors: err.errors || [],
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  });
+});
 
 export { app };
