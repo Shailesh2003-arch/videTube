@@ -59,7 +59,7 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
     email,
-    username,
+    username: username.toLowerCase(),
     password,
   });
 
