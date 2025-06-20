@@ -15,7 +15,6 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
   // 8. check for user-created or not, if created, then return response.
 
   const { username, email, fullName, password } = req.body;
-  console.log(req.body.username);
   const errors = [];
   if (!username)
     errors.push({ field: "username", message: "Username is required" });
