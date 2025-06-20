@@ -15,6 +15,7 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
   // 8. check for user-created or not, if created, then return response.
 
   const { username, email, fullName, password } = req.body;
+  console.log(req.body.username);
   const errors = [];
   if (!username)
     errors.push({ field: "username", message: "Username is required" });
@@ -47,6 +48,7 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
+  console.log(avatar);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!avatar) {
@@ -58,7 +60,7 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
     email,
-    username: username.toLowercase(),
+    username,
     password,
   });
 
