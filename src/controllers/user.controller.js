@@ -86,4 +86,76 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
   next();
 });
 
-export { registerUser };
+const generateAcessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    console.log(user);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating acesss and refresh token"
+    );
+  }
+};
+
+// login functionality
+const loginUser = asyncErrorHandler(async (req, res) => {
+  // take username and password from the user to login.
+  // validate the username and password
+  // check if the user with such username exists in the db if it exists, then check if the entered password is correct by decrypting it using the bcrypt library...
+  // generate access & refresh Token...
+  // send secure cookies
+  const { username, password } = req.body;
+  if (!username) {
+    throw new ApiError(400, "username is required");
+  }
+
+  const user = await User.findOne(username);
+
+  if (!user) {
+    throw new ApiError(404, "User does not exist!");
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid user credentials");
+  }
+  const { accessToken, refreshToken } = await generateAcessAndRefreshTokens(
+    user._id
+  );
+  console.log(user);
+  //
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+  console.log(loggedInUser);
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        },
+        "User logged In Successfully"
+      )
+    );
+});
+
+const logoutUser = asyncErrorHandler(async (req, res) => {});
+
+export { registerUser, loginUser, logoutUser };
