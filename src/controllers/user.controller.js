@@ -116,7 +116,7 @@ const loginUser = asyncErrorHandler(async (req, res) => {
     throw new ApiError(400, "username is required");
   }
 
-  const user = await User.findOne(username);
+  const user = await User.findOne({ username });
 
   if (!user) {
     throw new ApiError(404, "User does not exist!");
@@ -156,6 +156,25 @@ const loginUser = asyncErrorHandler(async (req, res) => {
     );
 });
 
-const logoutUser = asyncErrorHandler(async (req, res) => {});
+const logoutUser = asyncErrorHandler(async (req, res) => {
+  console.log(req.user);
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: { refreshToken: undefined },
+    },
+    { new: true }
+  );
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out"));
+});
 
 export { registerUser, loginUser, logoutUser };
