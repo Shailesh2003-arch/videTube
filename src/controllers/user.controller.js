@@ -92,7 +92,10 @@ const generateAcessAndRefreshTokens = async (userId) => {
     console.log(user);
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
-
+    console.log(
+      `newRefreshTokenGenerated after refreshing acccess token`,
+      refreshToken
+    );
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
@@ -211,8 +214,12 @@ const refreshAccessToken = asyncErrorHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, newRefreshToken } =
+    const { accessToken, refreshToken: newRefreshToken } =
       await generateAcessAndRefreshTokens(user._id);
+    console.log(
+      `Before setting the new refreshToken into database`,
+      newRefreshToken
+    );
 
     return res
       .status(200)
