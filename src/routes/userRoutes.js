@@ -26,6 +26,8 @@ router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/profile").get(verifyJWT, getCurrentUser);
 router.route("/update-profile").patch(verifyJWT, updateExistingDetailsOfUser);
+
+// Here you have 2 remaining routes to define for your profile-picture (avatar) update and coverImage Update...
 router.route("/reset-password").patch(verifyJWT, changeCurrentPassword);
 
 export default router;
