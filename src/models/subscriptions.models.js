@@ -4,11 +4,11 @@ const subscriptSchema = new Schema(
   {
     subscriber: {
       type: mongoose.Schema.Types.ObjectId, // one who is subscribing
-      required: true,
+      ref: "User",
     },
     channel: {
       type: mongoose.Schema.Types.ObjectId, // one to whom subscriber is subscribing
-      required: true,
+      ref: "User",
     },
   },
   { timestamps: true }
