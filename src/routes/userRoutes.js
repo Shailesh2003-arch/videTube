@@ -8,6 +8,7 @@ import {
   updateExistingDetailsOfUser,
   changeCurrentPassword,
   updateAvatar,
+  updateCoverImage,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -27,12 +28,12 @@ router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/profile").get(verifyJWT, getCurrentUser);
 router.route("/update-profile").patch(verifyJWT, updateExistingDetailsOfUser);
-
 router
   .route("/update-avatar")
   .patch(verifyJWT, upload.single("avatar"), updateAvatar);
-
-// Here you have 2 remaining routes to define for your profile-picture (avatar) update and coverImage Update...
+router
+  .route("/update-coverImage")
+  .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
 router.route("/reset-password").patch(verifyJWT, changeCurrentPassword);
 
 export default router;
