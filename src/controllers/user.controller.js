@@ -377,7 +377,7 @@ const updateAvatar = asyncErrorHandler(async (req, res) => {
       new ApiResponse(
         200,
         uploadedAvatarFile.url,
-        "Fetched exisisting avatar profile successfully"
+        "Updated avatar successfully"
       )
     );
 });
