@@ -382,6 +382,35 @@ const updateAvatar = asyncErrorHandler(async (req, res) => {
     );
 });
 
+const updateCoverImage = asyncErrorHandler(async (req, res) => {
+  const existingCoverImage = req.user.coverImage;
+  const parts = existingCoverImage.split("/upload/")[1];
+  const existingCoverImageWithExtension = parts.split(".")[0];
+  const publicId = existingCoverImageWithExtension.replace(/^v\d+\//, "");
+
+  if (!req.file) {
+    throw new ApiError(400, "Avatar file is required");
+  }
+
+  const newCoverImageFileLocalPath = req.file.path;
+  const updatedCoverImage = await uploadOnCloudinary(
+    newCoverImageFileLocalPath
+  );
+  req.user.coverImage = updatedCoverImage.url;
+  await req.user.save({ validateBeforeSave: false });
+  await cloudinary.uploader.destroy(publicId);
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatedCoverImage.url,
+        "Cover-image updated successfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -392,4 +421,5 @@ export {
   updateExistingDetailsOfUser,
   getUserChannelProfile,
   updateAvatar,
+  updateCoverImage,
 };
