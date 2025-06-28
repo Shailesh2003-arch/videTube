@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/users.models.js";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
 import jwt from "jsonwebtoken";
+import { v2 as cloudinary } from "cloudinary";
 const registerUser = asyncErrorHandler(async (req, res, next) => {
   // 1. collect user-details from frontend..
   // 2. All possible validation.
@@ -89,13 +90,8 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
 const generateAcessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
-    console.log(user);
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
-    console.log(
-      `newRefreshTokenGenerated after refreshing acccess token`,
-      refreshToken
-    );
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
@@ -132,12 +128,10 @@ const loginUser = asyncErrorHandler(async (req, res) => {
   const { accessToken, refreshToken } = await generateAcessAndRefreshTokens(
     user._id
   );
-  console.log(user);
   //
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
-  console.log(loggedInUser);
   const options = {
     httpOnly: true,
     secure: true,
@@ -160,7 +154,6 @@ const loginUser = asyncErrorHandler(async (req, res) => {
 });
 
 const logoutUser = asyncErrorHandler(async (req, res) => {
-  console.log(req.user);
   await User.findByIdAndUpdate(
     req.user._id,
     {
@@ -360,6 +353,35 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
     );
 });
 
+const updateAvatar = asyncErrorHandler(async (req, res) => {
+  const existingAvatarURL = req.user.avatar;
+  console.log(existingAvatarURL);
+  const parts = existingAvatarURL.split("/upload/")[1];
+  console.log(parts);
+  const existingAvatarWithExtension = parts.split(".")[0];
+  console.log(existingAvatarWithExtension);
+  const publicId = existingAvatarWithExtension.replace(/^v\d+\//, "");
+  console.log(publicId);
+
+  if (!req.file) {
+    throw new ApiError(400, "Avatar file required");
+  }
+  const newAvatarFileLocalPath = req.file.path;
+  const uploadedAvatarFile = await uploadOnCloudinary(newAvatarFileLocalPath);
+  req.user.avatar = uploadedAvatarFile.url;
+  await req.user.save({ validateBeforeSave: false });
+  await cloudinary.uploader.destroy(publicId);
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        uploadedAvatarFile.url,
+        "Fetched exisisting avatar profile successfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -369,4 +391,5 @@ export {
   changeCurrentPassword,
   updateExistingDetailsOfUser,
   getUserChannelProfile,
+  updateAvatar,
 };
