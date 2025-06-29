@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-const playlistSchema = new mongoose.Schema(
+const playlistSchema = new Schema(
   {
     name: {
       type: String,
@@ -18,7 +18,7 @@ const playlistSchema = new mongoose.Schema(
     ],
     owner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
     },
   },
   { timestamps: true }
