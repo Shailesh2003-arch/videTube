@@ -9,6 +9,8 @@ import {
   changeCurrentPassword,
   updateAvatar,
   updateCoverImage,
+  getUserChannelProfile,
+  getUserWatchHistory,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -35,5 +37,8 @@ router
   .route("/update-coverImage")
   .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
 router.route("/reset-password").patch(verifyJWT, changeCurrentPassword);
+
+router.route("/vidtube/:username").get(verifyJWT, getUserChannelProfile);
+router.route("/watch-history").get(verifyJWT, getUserWatchHistory);
 
 export default router;
