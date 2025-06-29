@@ -5,6 +5,7 @@ import { User } from "../models/users.models.js";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
 import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
+import mongoose from "mongoose";
 const registerUser = asyncErrorHandler(async (req, res, next) => {
   // 1. collect user-details from frontend..
   // 2. All possible validation.
@@ -409,6 +410,50 @@ const updateCoverImage = asyncErrorHandler(async (req, res) => {
         "Cover-image updated successfully"
       )
     );
+});
+
+const getUserWatchHistory = asyncErrorHandler(async (req, res) => {
+  await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+                {
+                  $addFields: {
+                    owner: {
+                      $first: "$owner",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ]);
 });
 
 export {
