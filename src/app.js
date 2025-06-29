@@ -27,6 +27,7 @@ import userRouter from "./routes/userRoutes.js";
 
 // routes declaration
 app.use("/users", userRouter);
+app.use("/vidtube", userRouter);
 
 // centralised Error-Handling middleware...
 
