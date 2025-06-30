@@ -24,10 +24,14 @@ app.use(cookieParser());
 // importing routes...
 
 import userRouter from "./routes/userRoutes.js";
+import videoRouter from "./routes/videoRoutes.js";
 
 // routes declaration
 app.use("/users", userRouter);
+
+// video routes...
 app.use("/vidtube", userRouter);
+app.use("/videos", videoRouter);
 
 // centralised Error-Handling middleware...
 
