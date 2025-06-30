@@ -20,9 +20,6 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
   if (!description) {
     throw new ApiError(400, "description is required");
   }
-  console.log(title);
-  console.log(description);
-
   const thumbnailLocalFilePath = req.files?.thumbnail[0]?.path;
   const videoFileLocalPath = req.files?.videoFile[0]?.path;
 
@@ -34,17 +31,12 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
     throw new ApiError(400, "Video file is required");
   }
 
-  console.log(thumbnailLocalFilePath);
-  console.log(videoFileLocalPath);
-
   const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalFilePath);
   const uploadedVideoFile = await uploadOnCloudinary(videoFileLocalPath);
 
   // extracting the duration of video from the uploaded video file
   const videoDuration = uploadedVideoFile.duration;
-  console.log(videoDuration);
   const durationInMinutes = parseFloat((videoDuration / 60).toFixed(2));
-  console.log(durationInMinutes);
 
   const video = await Video.create({
     title,
