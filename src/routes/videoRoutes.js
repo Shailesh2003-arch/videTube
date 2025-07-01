@@ -5,6 +5,7 @@ import {
   publishAVideo,
   getVideoById,
   updateVideoDetails,
+  deleteVideo,
 } from "../controllers/video.controller.js";
 
 const router = Router();
@@ -28,5 +29,6 @@ router.route("/vId/:videoId").get(verifyJWT, getVideoById);
 router
   .route("/vId/:videoId")
   .patch(verifyJWT, upload.single("thumbnail"), updateVideoDetails);
+router.route("/vId/:videoId").delete(verifyJWT, deleteVideo);
 
 export default router;
