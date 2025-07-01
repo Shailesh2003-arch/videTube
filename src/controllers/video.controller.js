@@ -4,6 +4,7 @@ import { Subscription } from "../models/subscriptions.models.js";
 import { User } from "../models/users.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { v2 as cloudinary } from "cloudinary";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
 
 // Controller for publishing a video...
@@ -82,4 +83,51 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, videoData, "Video fetched successfully"));
 });
 
-export { publishAVideo, getVideoById };
+// Controller for updating the details of the video such as it's title, description, and thumbnail file.
+const updateVideoDetails = asyncErrorHandler(async (req, res) => {
+  // here we will be updating the title, description and videoThumbnail of the videoFile...
+  const { videoId } = req.params;
+  let video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  const { title, description } = req.body;
+  if (!title) {
+    throw new ApiError(400, "Title is required");
+  }
+  if (!description) {
+    throw new ApiError(400, "Description is required");
+  }
+  const thumbnailFileLocalPath = req.file?.path;
+  if (!thumbnailFileLocalPath) {
+    throw new ApiError(400, "Thumbnail is required");
+  }
+  const existingThumbnailFile = video.thumbnail;
+  const parts = existingThumbnailFile.split("/upload/")[1];
+  const existingThumbnailFileWithExtension = parts.split(".")[0];
+  const publicId = existingThumbnailFileWithExtension.replace(/^v\d+\//, "");
+  const uploadedThumbnailFile = await uploadOnCloudinary(
+    thumbnailFileLocalPath
+  );
+
+  await cloudinary.uploader.destroy(publicId);
+
+  video.title = title;
+  video.description = description;
+  video.thumbnail = uploadedThumbnailFile.url;
+  await video.save({ validateBeforeSave: false });
+
+  const videoData = {
+    title: video.title,
+    description: video.description,
+    thumbnail: uploadedThumbnailFile.url,
+  };
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, videoData, "Video details updated successfully")
+    );
+});
+
+export { publishAVideo, getVideoById, updateVideoDetails };
