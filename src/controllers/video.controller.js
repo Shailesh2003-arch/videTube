@@ -130,4 +130,38 @@ const updateVideoDetails = asyncErrorHandler(async (req, res) => {
     );
 });
 
-export { publishAVideo, getVideoById, updateVideoDetails };
+// Controller for deleting the video...
+
+const deleteVideo = asyncErrorHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  // grabbing the existing thumbnail file uploaded on cloudinary so we can flush it...
+  const existingThumbnailFile = video.thumbnail;
+  console.log(existingThumbnailFile);
+  const parts = existingThumbnailFile.split("/upload/")[1];
+  const existingThumbnailFileWithExtension = parts.split(".")[0];
+  const publicId = existingThumbnailFileWithExtension.replace(/^v\d+\//, "");
+  console.log(publicId);
+
+  // grabbing the existing video file uploaded on cloudinary so we can flush it...
+  const existingVideoFile = video.videoFile;
+  console.log(existingVideoFile);
+  const partsOfVideo = existingVideoFile.split("/upload/")[1];
+  const existingVideoFileWithExtension = partsOfVideo.split(".")[0];
+  const publicIdOfVideo = existingVideoFileWithExtension.replace(/^v\d+\//, "");
+  console.log(publicIdOfVideo);
+
+  await cloudinary.uploader.destroy(publicId);
+  await cloudinary.uploader.destroy(publicIdOfVideo, {
+    resource_type: "video",
+  });
+  await video.deleteOne();
+  res.status(204).send();
+});
+
+export { publishAVideo, getVideoById, updateVideoDetails, deleteVideo };
