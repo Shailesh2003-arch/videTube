@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Video } from "../models/videos.models.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
 import { Subscription } from "../models/subscriptions.models.js";
@@ -6,6 +7,61 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { v2 as cloudinary } from "cloudinary";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
+
+// Controller for getting all video based on query, sort, pagination...
+
+const getAllVideos = asyncErrorHandler(async (req, res) => {
+  //TODO: get all videos based on query, sort, pagination
+  const { query, sortBy, sortType, userId } = req.query;
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 5;
+  const skip = (page - 1) * limit;
+
+  if (!userId) {
+    throw new ApiError(400, "UserId missing");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  // const allVideos = await Video.aggregate([
+  //   {
+  //     $match: {
+  //       videoOwner: new mongoose.Types.ObjectId(req.user._id),
+  //     },
+  //   },
+  //   { $sort: { createdAt: -1 } },
+  // ]);
+  // if (!allVideos) {
+  //   throw new ApiError(404, "No videos found");
+  // }
+
+  const allVideos = await Video.find(
+    { videoOwner: userId },
+    {
+      thumbnail: 1,
+      videoFile: 1,
+      title: 1,
+      description: 1,
+      duration: 1,
+      views: 1,
+      videoOwner: 1,
+      createdAt: 1,
+    }
+  )
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  if (!allVideos) {
+    throw new ApiError(404, "No videos found");
+  }
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, allVideos, "All videos fetched successfully"));
+});
 
 // Controller for publishing a video...
 const publishAVideo = asyncErrorHandler(async (req, res) => {
@@ -54,7 +110,6 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
 });
 
 // Controller for getting the video by its id...
-
 const getVideoById = asyncErrorHandler(async (req, res) => {
   const { videoId } = req.params;
   const video = await Video.findById(videoId).populate(
@@ -164,4 +219,10 @@ const deleteVideo = asyncErrorHandler(async (req, res) => {
   res.status(204).send();
 });
 
-export { publishAVideo, getVideoById, updateVideoDetails, deleteVideo };
+export {
+  publishAVideo,
+  getVideoById,
+  updateVideoDetails,
+  deleteVideo,
+  getAllVideos,
+};
