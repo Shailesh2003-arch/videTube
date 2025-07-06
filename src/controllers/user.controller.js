@@ -6,6 +6,7 @@ import { uploadOnCloudinary } from "../services/cloudinary.js";
 import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
+
 const registerUser = asyncErrorHandler(async (req, res, next) => {
   // 1. collect user-details from frontend..
   // 2. All possible validation.
