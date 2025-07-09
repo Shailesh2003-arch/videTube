@@ -132,10 +132,33 @@ const deletePlaylist = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Playlist deleted successfully ✅"));
 });
 
+// update playlist through ID...
+
+const updatePlaylistDetails = asyncErrorHandler(async (req, res) => {
+  const { playlistId } = req.params;
+  const name = req.body.name?.trim();
+  const description = req.body.description?.trim();
+  if (!playlistId) {
+    throw new ApiError(400, "Playlist Id required");
+  }
+  const updatedDetails = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      name,
+      description,
+    },
+    { new: true }
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, updatedDetails, "Details updated successfully"));
+});
+
 export {
   createPlaylist,
   addVideoToPlaylist,
   removeVideoFromAPlaylist,
   getPlaylistById,
   deletePlaylist,
+  updatePlaylistDetails,
 };
