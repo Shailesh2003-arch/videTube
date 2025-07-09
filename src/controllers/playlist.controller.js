@@ -36,4 +36,68 @@ const createPlaylist = asyncErrorHandler(async (req, res) => {
     );
 });
 
-export { createPlaylist };
+// add video to a playList...
+const addVideoToPlaylist = asyncErrorHandler(async (req, res) => {
+  const { playlistId, videoId } = req.params;
+  if (!playlistId) {
+    throw new ApiError(400, "Playlist Id required");
+  }
+  if (!videoId) {
+    throw new ApiError(400, "Video Id required");
+  }
+
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $addToSet: { videos: videoId },
+    },
+    { new: true }
+  );
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatedPlaylist,
+        "Video added to the playlist successfully 😁✅"
+      )
+    );
+});
+
+// delete video from a playlist...
+
+const removeVideoFromAPlaylist = asyncErrorHandler(async (req, res) => {
+  const { playlistId, videoId } = req.params;
+  if (!playlistId) {
+    throw new ApiError(400, "Playlist Id required");
+  }
+  if (!videoId) {
+    throw new ApiError(400, "Video Id required");
+  }
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $pull: {
+        videos: videoId,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  if (!updatedPlaylist) {
+    throw new ApiError(404, "Playlist not found");
+  }
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updatedPlaylist,
+        "Video removed from playlist the playlist 😁✅"
+      )
+    );
+});
+
+export { createPlaylist, addVideoToPlaylist, removeVideoFromAPlaylist };
