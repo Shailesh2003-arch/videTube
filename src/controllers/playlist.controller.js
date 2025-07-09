@@ -26,9 +26,6 @@ const createPlaylist = asyncErrorHandler(async (req, res) => {
   delete playListObject._id;
   delete playListObject.updatedAt;
 
-  console.log(`Name of the playlist : ${name}`);
-  console.log(`Description of the playlist : ${description}`);
-  console.log(`Owner of the playlist : ${owner}`);
   res
     .status(201)
     .json(
