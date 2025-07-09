@@ -25,6 +25,7 @@ app.use(cookieParser());
 
 import userRouter from "./routes/userRoutes.js";
 import videoRouter from "./routes/videoRoutes.js";
+import subscriptionRouter from "./routes/subscriptionRoutes.js";
 
 // routes declaration
 app.use("/users", userRouter);
@@ -32,6 +33,7 @@ app.use("/users", userRouter);
 // video routes...
 app.use("/vidtube", userRouter);
 app.use("/videos", videoRouter);
+app.use("/subscription", subscriptionRouter);
 
 // centralised Error-Handling middleware...
 
