@@ -7,6 +7,7 @@ import {
   getPlaylistById,
   deletePlaylist,
   updatePlaylistDetails,
+  getUserPlaylists,
 } from "../controllers/playlist.controller.js";
 
 const router = Router();
@@ -22,5 +23,7 @@ router
   .get(getPlaylistById)
   .delete(deletePlaylist)
   .patch(updatePlaylistDetails);
+
+router.route("/user/:userId").get(getUserPlaylists);
 
 export default router;
