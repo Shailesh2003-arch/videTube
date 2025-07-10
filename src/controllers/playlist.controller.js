@@ -1,7 +1,9 @@
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Playlist } from "../models/playlist.models.js";
+import { User } from "../models/users.models.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
+import mongoose from "mongoose";
 
 // create a playlist...
 
@@ -34,6 +36,7 @@ const createPlaylist = asyncErrorHandler(async (req, res) => {
 });
 
 // add video to a playList...
+
 const addVideoToPlaylist = asyncErrorHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
   if (!playlistId) {
@@ -98,6 +101,7 @@ const removeVideoFromAPlaylist = asyncErrorHandler(async (req, res) => {
 });
 
 // get playlist by ID...
+
 const getPlaylistById = asyncErrorHandler(async (req, res) => {
   const { playlistId } = req.params;
   if (!playlistId) {
@@ -154,6 +158,41 @@ const updatePlaylistDetails = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedDetails, "Details updated successfully"));
 });
 
+// get users all playlists...
+const getUserPlaylists = asyncErrorHandler(async (req, res) => {
+  const { userId } = req.params;
+  console.log(userId);
+  if (!userId) {
+    throw new ApiError(400, "User-Id is required");
+  }
+  const userExists = await User.exists({ _id: userId });
+  if (!userExists) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const allPlaylists = await Playlist.find(
+    { owner: userId },
+    {
+      name: 1,
+      description: 1,
+      videos: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      _id: 1,
+    }
+  );
+
+  if (!allPlaylists || allPlaylists.length === 0) {
+    throw new ApiError(404, "No playlists found for this user");
+  }
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, allPlaylists, "Fetched all playlists by this user")
+    );
+});
+
 export {
   createPlaylist,
   addVideoToPlaylist,
@@ -161,4 +200,5 @@ export {
   getPlaylistById,
   deletePlaylist,
   updatePlaylistDetails,
+  getUserPlaylists,
 };
