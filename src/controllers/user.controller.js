@@ -7,6 +7,8 @@ import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
 
+// [CLEAN]
+// Register user functionality...
 const registerUser = asyncErrorHandler(async (req, res) => {
   // 1. collect user-details from frontend..
   // 2. All possible validation.
@@ -16,7 +18,6 @@ const registerUser = asyncErrorHandler(async (req, res) => {
   // 6. create user-object and create entry in db.
   // 7. remove password and refresh token field from response.
   // 8. check for user-created or not, if created, then return response.
-
   const { username, email, fullName, password } = req.body;
   const errors = [];
   if (!username)
@@ -24,7 +25,7 @@ const registerUser = asyncErrorHandler(async (req, res) => {
   if (!email) errors.push({ field: "email", message: "email is required" });
   if (!fullName)
     errors.push({
-      field: "full name is required",
+      field: "fullName",
       message: "full name is required",
     });
   if (!password)
@@ -87,38 +88,29 @@ const registerUser = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User created successfully"));
 });
 
-const generateAcessAndRefreshTokens = async (userId) => {
-  try {
-    const user = await User.findById(userId);
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
-    return { accessToken, refreshToken };
-  } catch (error) {
-    throw new ApiError(
-      500,
-      "Something went wrong while generating acesss and refresh token"
-    );
-  }
-};
-
 // login functionality
 const loginUser = asyncErrorHandler(async (req, res) => {
-  // take username and password from the user to login.
-  // validate the username and password
-  // check if the user with such username exists in the db if it exists, then check if the entered password is correct by decrypting it using the bcrypt library...
-  // generate access & refresh Token...
-  // send secure cookies
-  const { username, password } = req.body;
+  // [BEFORE]
+  // const { username, password } => req.body;
+
+  // [AFTER]: Benefit - If by any chance user enters whitespace at the end we will trim it...
+
+  const username = req.body.username?.trim();
+  const password = req.body.password?.trim();
+
   if (!username) {
-    throw new ApiError(400, "username is required");
+    throw new ApiError(400, "username is required!");
   }
 
   const user = await User.findOne({ username });
 
   if (!user) {
     throw new ApiError(404, "User does not exist!");
+  }
+
+  // [AFTER] : Added password presence check..
+  if (!password) {
+    throw new ApiError(400, "Password is required!");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
@@ -153,6 +145,26 @@ const loginUser = asyncErrorHandler(async (req, res) => {
     );
 });
 
+// [CLEAN]
+// Generating Acess And Refresh Tokens functionality...
+const generateAcessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating acesss and refresh token"
+    );
+  }
+};
+
+// [CLEAN]
+// logout functionality...
 const logoutUser = asyncErrorHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
@@ -173,11 +185,11 @@ const logoutUser = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged out"));
 });
 
+// [CLEAN]
+// Refresh Access token of user functionality...
 const refreshAccessToken = asyncErrorHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies?.refreshToken || req.body.refreshToken;
-
-  console.log(`Incoming refreshToken from cookies`, incomingRefreshToken);
 
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorised request");
@@ -187,7 +199,6 @@ const refreshAccessToken = asyncErrorHandler(async (req, res) => {
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
-    console.log(decodedIncomingRefreshToken);
     const user = await User.findById(decodedIncomingRefreshToken?._id);
     if (!user) {
       throw new ApiError(401, "Invalid refresh token");
@@ -195,11 +206,6 @@ const refreshAccessToken = asyncErrorHandler(async (req, res) => {
 
     if (incomingRefreshToken !== user?.refreshToken) {
       throw new ApiError(401, "Refresh token is expired/used ");
-    }
-    if (incomingRefreshToken == user?.refreshToken) {
-      console.log(
-        `Incoming refreshToken : ${incomingRefreshToken} existing refreshToken : ${user.refreshToken}`
-      );
     }
 
     const options = {
@@ -209,10 +215,6 @@ const refreshAccessToken = asyncErrorHandler(async (req, res) => {
 
     const { accessToken, refreshToken: newRefreshToken } =
       await generateAcessAndRefreshTokens(user._id);
-    console.log(
-      `Before setting the new refreshToken into database`,
-      newRefreshToken
-    );
 
     return res
       .status(200)
@@ -233,8 +235,8 @@ const refreshAccessToken = asyncErrorHandler(async (req, res) => {
   }
 });
 
+// [CLEAN]
 // oldPassword change functionality
-
 const changeCurrentPassword = asyncErrorHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const user = await User.findById(req.user?._id);
@@ -251,16 +253,17 @@ const changeCurrentPassword = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
 
-// get current user...
-
+// [CLEAN]
+// get currently logged-in user...
 const getCurrentUser = asyncErrorHandler(async (req, res) => {
-  return res
+  const loggedInUser = req.user;
+  res
     .status(200)
-    .json(new ApiResponse(200, req.user, "User fetched Successfully"));
+    .json(new ApiResponse(200, loggedInUser, "User fetched Successfully"));
 });
 
+// [CLEAN]
 // Updating other details of the user...
-
 const updateExistingDetailsOfUser = asyncErrorHandler(async (req, res) => {
   const { fullName, email } = req.body;
   if (!fullName || !email) {
@@ -279,8 +282,8 @@ const updateExistingDetailsOfUser = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
+// [CLEAN]
 // getUserChannelProfile
-
 const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
   const { username } = req.params;
   if (!username?.trim) {
@@ -342,7 +345,6 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
       },
     },
   ]);
-  console.log(channel);
   if (!channel?.length) {
     throw new ApiError(404, "channel does not exists");
   }
@@ -353,15 +355,13 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
     );
 });
 
+// [CLEAN]
+// Update avatar functionality...
 const updateAvatar = asyncErrorHandler(async (req, res) => {
   const existingAvatarURL = req.user.avatar;
-  console.log(existingAvatarURL);
   const parts = existingAvatarURL.split("/upload/")[1];
-  console.log(parts);
   const existingAvatarWithExtension = parts.split(".")[0];
-  console.log(existingAvatarWithExtension);
   const publicId = existingAvatarWithExtension.replace(/^v\d+\//, "");
-  console.log(publicId);
 
   if (!req.file) {
     throw new ApiError(400, "Avatar file required");
@@ -382,6 +382,8 @@ const updateAvatar = asyncErrorHandler(async (req, res) => {
     );
 });
 
+// [CLEAN]
+// Update cover-image functionality...
 const updateCoverImage = asyncErrorHandler(async (req, res) => {
   const existingCoverImage = req.user.coverImage;
   const parts = existingCoverImage.split("/upload/")[1];
@@ -411,8 +413,9 @@ const updateCoverImage = asyncErrorHandler(async (req, res) => {
     );
 });
 
+// FIXME: Till now we have not made the functionality that will handle the user's watch history so this will be pending...
 const getUserWatchHistory = asyncErrorHandler(async (req, res) => {
-  await User.aggregate([
+  const user = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(req.user._id),
@@ -453,6 +456,26 @@ const getUserWatchHistory = asyncErrorHandler(async (req, res) => {
       },
     },
   ]);
+  // if (!watchHistory) {
+  //   return res
+  //     .status(200)
+  //     .json(
+  //       new ApiResponse(
+  //         200,
+  //         user[0].watchHistory,
+  //         "You haven't watched any video yet..."
+  //       )
+  //     );
+  // }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "Watch history fetched successfully"
+      )
+    );
 });
 
 export {
