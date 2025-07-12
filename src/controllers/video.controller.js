@@ -210,7 +210,7 @@ const updateVideoDetails = asyncErrorHandler(async (req, res) => {
 const deleteVideo = asyncErrorHandler(async (req, res) => {
   const { videoId } = req.params;
 
-  // [AFTER]
+  // [AFTER] : Added videoId presence check...
   if (!videoId) {
     throw new ApiError(400, "Video-Id is required");
   }
