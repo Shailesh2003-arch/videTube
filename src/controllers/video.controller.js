@@ -10,6 +10,7 @@ import { uploadOnCloudinary } from "../services/cloudinary.js";
 
 // Controller for getting all video based on query, sort, pagination...
 
+// FIXME: Will fix this a little later as will need to add pagination sorting and all...
 const getAllVideos = asyncErrorHandler(async (req, res) => {
   //TODO: get all videos based on query, sort, pagination
   const { query, sortBy, sortType, userId } = req.query;
@@ -69,7 +70,12 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
   // if not present throw error
   // 2. take thumbnail & videoFile to be updated if not present throw error.
   // 3. upload the thumbnail and videoFile to cloudinary then take the returned url of thumbnail and videoFile's link and save this video into the databse.
-  const { title, description } = req.body;
+
+  // [BEFORE]
+  // const { title, description } = req.body;
+  // [AFTER]
+  const title = req.body.title?.trim();
+  const description = req.body.description?.trim();
 
   if (!title) {
     throw new ApiError(400, "Title is required");
@@ -95,6 +101,7 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
   const videoDuration = uploadedVideoFile.duration;
   const durationInMinutes = parseFloat((videoDuration / 60).toFixed(2));
 
+  // [BEFORE]: Here firstly we were passing whole video object created as it is in the response...
   const video = await Video.create({
     title,
     description,
@@ -103,10 +110,14 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
     duration: durationInMinutes,
     videoOwner: req.user?._id,
   });
+  // [AFTER]:Here we are just passing needed fields of created video in the response and corrected status code from 200 to 201...
+  const videoObj = video.toObject();
+  delete videoObj.updatedAt;
+  delete videoObj.__v;
 
   res
-    .status(200)
-    .json(new ApiResponse(201, { video }, "Video published Successfully"));
+    .status(201)
+    .json(new ApiResponse(200, { videoObj }, "Video published Successfully"));
 });
 
 // Controller for getting the video by its id...
@@ -126,6 +137,7 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
     channel: video.videoOwner._id,
   });
 
+  // [BEFORE]: Here firstly we were passing whole video object fetched from the DB as it is in the response...
   const videoData = {
     ...video._doc,
     videoOwner: {
@@ -133,6 +145,9 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
       subscriberCount,
     },
   };
+  // [AFTER]:Here we are just passing needed fields of requested video in the response.
+  delete videoData.__v;
+  delete videoData.updatedAt;
   res
     .status(200)
     .json(new ApiResponse(200, videoData, "Video fetched successfully"));
@@ -146,8 +161,13 @@ const updateVideoDetails = asyncErrorHandler(async (req, res) => {
   if (!video) {
     throw new ApiError(404, "Video not found");
   }
+  // [BEFORE]
+  // const { title, description } = req.body;
 
-  const { title, description } = req.body;
+  // [AFTER]
+  const title = req.body.title?.trim();
+  const description = req.body.description?.trim();
+
   if (!title) {
     throw new ApiError(400, "Title is required");
   }
@@ -190,6 +210,10 @@ const updateVideoDetails = asyncErrorHandler(async (req, res) => {
 const deleteVideo = asyncErrorHandler(async (req, res) => {
   const { videoId } = req.params;
 
+  // [AFTER]
+  if (!videoId) {
+    throw new ApiError(400, "Video-Id is required");
+  }
   const video = await Video.findById(videoId);
   if (!video) {
     throw new ApiError(404, "Video not found");
@@ -197,19 +221,15 @@ const deleteVideo = asyncErrorHandler(async (req, res) => {
 
   // grabbing the existing thumbnail file uploaded on cloudinary so we can flush it...
   const existingThumbnailFile = video.thumbnail;
-  console.log(existingThumbnailFile);
   const parts = existingThumbnailFile.split("/upload/")[1];
   const existingThumbnailFileWithExtension = parts.split(".")[0];
   const publicId = existingThumbnailFileWithExtension.replace(/^v\d+\//, "");
-  console.log(publicId);
 
   // grabbing the existing video file uploaded on cloudinary so we can flush it...
   const existingVideoFile = video.videoFile;
-  console.log(existingVideoFile);
   const partsOfVideo = existingVideoFile.split("/upload/")[1];
   const existingVideoFileWithExtension = partsOfVideo.split(".")[0];
   const publicIdOfVideo = existingVideoFileWithExtension.replace(/^v\d+\//, "");
-  console.log(publicIdOfVideo);
 
   await cloudinary.uploader.destroy(publicId);
   await cloudinary.uploader.destroy(publicIdOfVideo, {
