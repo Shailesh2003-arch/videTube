@@ -36,7 +36,7 @@ app.use("/api/v1/users", userRouter);
 
 // video routes...
 app.use("/vidtube", userRouter);
-app.use("/videos", videoRouter);
+app.use("/api/v1/users/videos", videoRouter);
 app.use("/subscription", subscriptionRouter);
 app.use("/likes", likeRouter);
 app.use("/comments", commentRouter);
