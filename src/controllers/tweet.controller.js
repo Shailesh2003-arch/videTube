@@ -2,7 +2,6 @@ import { Tweet } from "../models/tweets.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
-import { User } from "../models/users.models.js";
 
 // create a tweet...
 const createTweet = asyncErrorHandler(async (req, res) => {
@@ -20,10 +19,13 @@ const createTweet = asyncErrorHandler(async (req, res) => {
     content,
     owner: tweetBy,
   });
-
+  // [AFTER]: added only required data into the response object...
+  const tweetObj = tweet.toObject();
+  delete tweetObj.__v;
+  delete tweetObj.updatedAt;
   res
     .status(201)
-    .json(new ApiResponse(200, tweet, "Tweet created successfully"));
+    .json(new ApiResponse(200, tweetObj, "Tweet created successfully"));
 });
 
 // update a tweet...
@@ -44,17 +46,21 @@ const updateTweet = asyncErrorHandler(async (req, res) => {
       new: true,
     }
   );
-  console.log(updatedTweet);
   if (!updatedTweet) {
     throw new ApiError(404, "Tweet with the Id not found");
   }
+  // [AFTER]: added only required data into the response object...
+  const updatedTweetObj = updatedTweet.toObject();
+  delete updatedTweetObj.__v;
+  delete updatedTweetObj.updatedAt;
+
   res
     .status(200)
-    .json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
+    .json(new ApiResponse(200, updatedTweetObj, "Tweet updated successfully"));
 });
 
 // delete tweet...
-
+// [CLEAN]
 const deleteTweet = asyncErrorHandler(async (req, res) => {
   const { tweetId } = req.params;
   if (!tweetId) {
@@ -65,6 +71,7 @@ const deleteTweet = asyncErrorHandler(async (req, res) => {
 });
 
 // get user tweets
+// [CLEAN]
 const getUserTweets = asyncErrorHandler(async (req, res) => {
   const { userId } = req.params;
   if (!userId) {
