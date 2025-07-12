@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
 
-const registerUser = asyncErrorHandler(async (req, res, next) => {
+const registerUser = asyncErrorHandler(async (req, res) => {
   // 1. collect user-details from frontend..
   // 2. All possible validation.
   // 3. check if user already exist. (check via email).
@@ -85,8 +85,6 @@ const registerUser = asyncErrorHandler(async (req, res, next) => {
   res
     .status(201)
     .json(new ApiResponse(200, createdUser, "User created successfully"));
-
-  next();
 });
 
 const generateAcessAndRefreshTokens = async (userId) => {
