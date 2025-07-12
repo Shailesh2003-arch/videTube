@@ -32,6 +32,7 @@ router
   .patch(verifyJWT, upload.single("thumbnail"), updateVideoDetails);
 router.route("/vId/:videoId").delete(verifyJWT, deleteVideo);
 
-router.route("/videos").get(verifyJWT, getAllVideos);
+// FIXME: Iska route dekhlena inside postman...
+router.route("/allVideos").get(verifyJWT, getAllVideos);
 
 export default router;
