@@ -32,7 +32,7 @@ import commentRouter from "./routes/commentRoutes.js";
 import tweetRouter from "./routes/tweetRoutes.js";
 
 // routes declaration
-app.use("/users", userRouter);
+app.use("/api/v1/users", userRouter);
 
 // video routes...
 app.use("/vidtube", userRouter);
