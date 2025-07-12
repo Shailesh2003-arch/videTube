@@ -40,7 +40,7 @@ app.use("/api/v1/users/videos", videoRouter);
 app.use("/subscription", subscriptionRouter);
 app.use("/likes", likeRouter);
 app.use("/comments", commentRouter);
-app.use("/tweets", tweetRouter);
+app.use("/api/v1/users/tweets", tweetRouter);
 
 // playlist routes...
 app.use("/playlist", playlistRouter);
