@@ -43,7 +43,7 @@ app.use("/comments", commentRouter);
 app.use("/api/v1/users/tweets", tweetRouter);
 
 // playlist routes...
-app.use("/playlist", playlistRouter);
+app.use("/api/v1/users/playlist", playlistRouter);
 
 // centralised Error-Handling middleware...
 
