@@ -29,13 +29,18 @@ const addComment = asyncErrorHandler(async (req, res) => {
     comment: content,
     owner: commentBy,
   });
+  // [AFTER]: add only required data in response object...
+  const newCommentObj = newComment.toObject();
+  delete newCommentObj.__v;
+  delete newCommentObj.updatedAt;
 
   res
     .status(201)
-    .json(new ApiResponse(200, newComment, "Comment added successfully"));
+    .json(new ApiResponse(200, newCommentObj, "Comment added successfully"));
 });
 
 // delete the comment from a video
+// [CLEAN]
 const deleteComment = asyncErrorHandler(async (req, res) => {
   const { commentId } = req.params;
   if (!commentId) {
@@ -68,9 +73,14 @@ const updateComment = asyncErrorHandler(async (req, res) => {
     },
     { new: true }
   );
+  // [AFTER]: add only required data to the response object...
+  const updatedCommentObj = updatedComment.toObject();
+  delete updatedCommentObj.__v;
   res
     .status(200)
-    .json(new ApiResponse(200, updatedComment, "Comment updated successfully"));
+    .json(
+      new ApiResponse(200, updatedCommentObj, "Comment updated successfully")
+    );
 });
 
 export { addComment, deleteComment, updateComment };
