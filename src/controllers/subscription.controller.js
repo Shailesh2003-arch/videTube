@@ -6,7 +6,7 @@ import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
 import mongoose from "mongoose";
 
 // Controller to return the subscriber list of channel
-
+// [CLEAN]
 const getChannelSubscribers = asyncErrorHandler(async (req, res) => {
   const { channelId } = req.params;
   if (!channelId) {
@@ -80,12 +80,13 @@ const getChannelSubscribers = asyncErrorHandler(async (req, res) => {
       new ApiResponse(
         200,
         subscribersList,
-        "Channel fetched successully, subscriber's list coming soon!"
+        "Channel subscriber's list fetched successully!"
       )
     );
 });
 
 // controller to return channel list to which user has subscribed
+// [CLEAN]
 const getSubscribedChannels = asyncErrorHandler(async (req, res) => {
   const { subscriberId } = req.params;
   console.log(subscriberId);
@@ -164,7 +165,6 @@ const getSubscribedChannels = asyncErrorHandler(async (req, res) => {
 const toggleSubscription = asyncErrorHandler(async (req, res) => {
   const { channelId } = req.params;
   const subscriberId = req.user._id;
-  // TODO: toggle subscription
   if (!channelId) {
     throw new ApiError(400, "Channel Id not found");
   }
@@ -190,9 +190,14 @@ const toggleSubscription = asyncErrorHandler(async (req, res) => {
     subscriber: subscriberId,
   });
 
+  // [AFTER]: added only required data to the response object...
+  const newSubscriptionObj = newSubscription.toObject();
+  delete newSubscriptionObj.__v;
+  delete newSubscriptionObj.updatedAt;
+
   res
     .status(200)
-    .json(new ApiResponse(201, newSubscription, "Subscribed successfully"));
+    .json(new ApiResponse(201, newSubscriptionObj, "Subscribed successfully"));
 });
 
 export { getChannelSubscribers, getSubscribedChannels, toggleSubscription };
