@@ -38,8 +38,8 @@ app.use("/api/v1/users", userRouter);
 app.use("/vidtube", userRouter);
 app.use("/api/v1/users/videos", videoRouter);
 app.use("/api/v1/users/subscription", subscriptionRouter);
-app.use("/likes", likeRouter);
-app.use("/comments", commentRouter);
+app.use("/api/v1/likes", likeRouter);
+app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/users/tweets", tweetRouter);
 
 // playlist routes...
