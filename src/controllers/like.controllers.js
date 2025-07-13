@@ -3,6 +3,7 @@ import { Video } from "../models/videos.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
+import { Tweet } from "../models/tweets.models.js";
 import { Comment } from "../models/comments.models.js";
 
 // toggle videoLike...
@@ -100,7 +101,38 @@ const toggleCommentLike = asyncErrorHandler(async (req, res) => {
 
 const toggleTweetLike = asyncErrorHandler(async (req, res) => {
   const { tweetId } = req.params;
-  //TODO: toggle like on tweet
+  const tweetLikedBy = req.user._id;
+  if (!tweetId) {
+    throw new ApiError(400, "Tweet-Id is required");
+  }
+  const tweet = await Tweet.findById(tweetId);
+  if (!tweet) {
+    throw new ApiError(404, "Tweet not found");
+  }
+  const existingLikeOnTweet = await Like.findOne({
+    likedBy: tweetLikedBy,
+    tweet: tweetId,
+  });
+  if (existingLikeOnTweet) {
+    await Like.deleteOne({
+      likedBy: tweetLikedBy,
+      tweet: tweetId,
+    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Tweet unliked successfully"));
+  }
+
+  const newLikeOnTweet = await Like.create({
+    likedBy: tweetLikedBy,
+    tweet: tweetId,
+  });
+  const newLikeOnTweetObj = newLikeOnTweet.toObject();
+  delete newLikeOnTweetObj.__v;
+  delete newLikeOnTweetObj.updatedAt;
+  res
+    .status(200)
+    .json(new ApiResponse(200, newLikeOnTweetObj, "Tweet liked successfully"));
 });
 
-export { toggleVideoLike, getLikedVideos, toggleCommentLike };
+export { toggleVideoLike, getLikedVideos, toggleCommentLike, toggleTweetLike };
