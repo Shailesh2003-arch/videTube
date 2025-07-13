@@ -21,8 +21,7 @@ app.use(express.static("public"));
 
 app.use(cookieParser());
 
-// importing routes...
-
+// [IMPORTS]
 import userRouter from "./routes/userRoutes.js";
 import videoRouter from "./routes/videoRoutes.js";
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
@@ -31,22 +30,16 @@ import likeRouter from "./routes/likeRoutes.js";
 import commentRouter from "./routes/commentRoutes.js";
 import tweetRouter from "./routes/tweetRoutes.js";
 
-// routes declaration
+// [ROUTES]
 app.use("/api/v1/users", userRouter);
-
-// video routes...
-app.use("/vidtube", userRouter);
 app.use("/api/v1/users/videos", videoRouter);
 app.use("/api/v1/users/subscription", subscriptionRouter);
 app.use("/api/v1/likes", likeRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/users/tweets", tweetRouter);
-
-// playlist routes...
 app.use("/api/v1/users/playlist", playlistRouter);
 
-// centralised Error-Handling middleware...
-
+// [ERROR HANDLING MIDDLEWARE]
 app.use((err, req, res, next) => {
   res.status(err.statusCode || 500).json({
     success: false,
