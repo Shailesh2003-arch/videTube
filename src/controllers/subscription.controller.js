@@ -197,7 +197,7 @@ const toggleSubscription = asyncErrorHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new ApiResponse(201, newSubscriptionObj, "Subscribed successfully"));
+    .json(new ApiResponse(200, newSubscriptionObj, "Subscribed successfully"));
 });
 
 export { getChannelSubscribers, getSubscribedChannels, toggleSubscription };
