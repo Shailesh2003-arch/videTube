@@ -23,15 +23,15 @@ const createPlaylist = asyncErrorHandler(async (req, res) => {
     description,
     owner,
   });
-
+  // [AFTER] : added only required data in response object...
   const playListObject = newPlaylist.toObject();
-  delete playListObject._id;
   delete playListObject.updatedAt;
+  delete playListObject.__v;
 
   res
     .status(201)
     .json(
-      new ApiResponse(200, playListObject, "Playlist created successfully ✅")
+      new ApiResponse(200, playListObject, "Playlist created successfully")
     );
 });
 
@@ -54,13 +54,18 @@ const addVideoToPlaylist = asyncErrorHandler(async (req, res) => {
     { new: true }
   );
 
+  // [AFTER]: added only required data to the response object...
+  const updatedPlaylistObj = updatedPlaylist.toObject();
+  delete updatedPlaylistObj.__v;
+  delete updatedPlaylistObj.updatedAt;
+
   res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        updatedPlaylist,
-        "Video added to the playlist successfully 😁✅"
+        updatedPlaylistObj,
+        "Video added to the playlist successfully"
       )
     );
 });
@@ -89,19 +94,20 @@ const removeVideoFromAPlaylist = asyncErrorHandler(async (req, res) => {
   if (!updatedPlaylist) {
     throw new ApiError(404, "Playlist not found");
   }
+  // [AFTER]: add only required data to response object...
+  const updatedPlaylistObj = updatedPlaylist.toObject();
+  delete updatedPlaylistObj.__v;
+  delete updatedPlaylistObj.createdAt;
+  delete updatedPlaylistObj.updatedAt;
   res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        updatedPlaylist,
-        "Video removed from playlist the playlist 😁✅"
-      )
+      new ApiResponse(200, updatedPlaylistObj, "Video removed from playlist")
     );
 });
 
 // get playlist by ID...
-
+// [CLEAN]
 const getPlaylistById = asyncErrorHandler(async (req, res) => {
   const { playlistId } = req.params;
   if (!playlistId) {
@@ -109,7 +115,6 @@ const getPlaylistById = asyncErrorHandler(async (req, res) => {
   }
   const playList = await Playlist.findById(playlistId);
   const playListObject = playList.toObject();
-  delete playListObject._id;
   delete playListObject.__v;
   delete playListObject.updatedAt;
   if (!playList) {
@@ -131,9 +136,8 @@ const deletePlaylist = asyncErrorHandler(async (req, res) => {
   }
 
   await Playlist.findByIdAndDelete(playlistId);
-  res
-    .status(204)
-    .json(new ApiResponse(200, {}, "Playlist deleted successfully ✅"));
+  // [AFTER]: REST standard followed for deleting...
+  res.status(204).send();
 });
 
 // update playlist through ID...
@@ -153,12 +157,19 @@ const updatePlaylistDetails = asyncErrorHandler(async (req, res) => {
     },
     { new: true }
   );
+
+  const updatedDetailsObj = updatedDetails.toObject();
+  delete updatedDetailsObj.__v;
+  // [AFTER]: add only required data to response object...
   res
     .status(200)
-    .json(new ApiResponse(200, updatedDetails, "Details updated successfully"));
+    .json(
+      new ApiResponse(200, updatedDetailsObj, "Details updated successfully")
+    );
 });
 
 // get users all playlists...
+// [CLEAN]
 const getUserPlaylists = asyncErrorHandler(async (req, res) => {
   const { userId } = req.params;
   console.log(userId);
