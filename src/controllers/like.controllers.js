@@ -25,19 +25,24 @@ const toggleVideoLike = asyncErrorHandler(async (req, res) => {
     await Like.deleteOne({ likedBy: likedByUser });
     return res
       .status(200)
-      .json(new ApiResponse(200, {}, "Video unliked successfully 🚫❤️"));
+      .json(new ApiResponse(200, "Video unliked successfully"));
   }
   const newLike = await Like.create({
     video: videoId,
     likedBy: likedByUser,
   });
+  // [AFTER]: add only required data to response object...
+  const newLikeObj = newLike.toObject();
+  delete newLikeObj.__v;
+  delete newLikeObj.updatedAt;
 
   res
     .status(200)
-    .json(new ApiResponse(200, newLike, "Video liked successfully ❤️"));
+    .json(new ApiResponse(200, newLikeObj, "Video liked successfully"));
 });
 
 // getLiked videos by the user...
+// [CLEAN]
 const getLikedVideos = asyncErrorHandler(async (req, res) => {
   const user = req.user._id;
   const likedVideos = await Like.find({ likedBy: user })
@@ -76,21 +81,26 @@ const toggleCommentLike = asyncErrorHandler(async (req, res) => {
     await Like.deleteOne({ comment: commentId, likedBy: likedBy });
     return res
       .status(200)
-      .json(new ApiResponse(200, null, "Comment like removed successfully ✅"));
+      .json(new ApiResponse(200, null, "Comment like removed successfully"));
   }
   const newLikeOnComment = await Like.create({
     comment: commentId,
     likedBy: likedBy,
   });
+  // [AFTER]: add only required data to response object...
+  const newLikeOnCommentObj = newLikeOnComment.toObject();
+  delete newLikeOnCommentObj.__v;
+  delete newLikeOnCommentObj.updatedAt;
   res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        newLikeOnComment,
-        "Liked on comment successfully ❤️✅"
-      )
+      new ApiResponse(200, newLikeOnCommentObj, "Liked on comment successfully")
     );
+});
+
+const toggleTweetLike = asyncErrorHandler(async (req, res) => {
+  const { tweetId } = req.params;
+  //TODO: toggle like on tweet
 });
 
 export { toggleVideoLike, getLikedVideos, toggleCommentLike };
