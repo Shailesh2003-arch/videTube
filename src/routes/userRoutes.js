@@ -38,7 +38,7 @@ router
   .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
 router.route("/reset-password").patch(verifyJWT, changeCurrentPassword);
 
-router.route("/:username").get(verifyJWT, getUserChannelProfile);
 router.route("/watch-history").get(verifyJWT, getUserWatchHistory);
+router.route("/:username").get(verifyJWT, getUserChannelProfile);
 
 export default router;
