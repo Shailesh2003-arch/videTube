@@ -122,16 +122,27 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
 
 // Controller for getting the video by its id...
 const getVideoById = asyncErrorHandler(async (req, res) => {
+  const userId = req.user._id;
   const { videoId } = req.params;
   const video = await Video.findById(videoId).populate(
     "videoOwner",
     "username avatar fullName"
   );
-  video.views += 124;
-  await video.save();
   if (!video) {
     throw new ApiError(404, "Video not found");
   }
+  //[AFTER]
+  const user = await User.findById(userId);
+  const existingIndex = user.watchHistory.findIndex((entry) =>
+    entry.video.equals(videoId)
+  );
+
+  if (existingIndex !== -1) {
+    user.watchHistory[existingIndex].watchedAt = new Date();
+  } else {
+    user.watchHistory.push({ video: videoId });
+  }
+  await user.save({ validateBeforeSave: false });
 
   let subscriberCount = await Subscription.countDocuments({
     channel: video.videoOwner._id,
@@ -148,6 +159,7 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
   // [AFTER]:Here we are just passing needed fields of requested video in the response.
   delete videoData.__v;
   delete videoData.updatedAt;
+
   res
     .status(200)
     .json(new ApiResponse(200, videoData, "Video fetched successfully"));
