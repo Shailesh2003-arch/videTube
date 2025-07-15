@@ -413,67 +413,72 @@ const updateCoverImage = asyncErrorHandler(async (req, res) => {
     );
 });
 
-// FIXME: Till now we have not made the functionality that will handle the user's watch history so this will be pending...
+// [AFTER]: fixed
 const getUserWatchHistory = asyncErrorHandler(async (req, res) => {
-  const user = await User.aggregate([
+  const userWatchHistory = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(req.user._id),
       },
     },
     {
+      $unwind: "$watchHistory",
+    },
+    {
       $lookup: {
         from: "videos",
-        localField: "watchHistory",
+        localField: "watchHistory.video",
         foreignField: "_id",
-        as: "watchHistory",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "owner",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    fullName: 1,
-                    username: 1,
-                    avatar: 1,
-                  },
-                },
-                {
-                  $addFields: {
-                    owner: {
-                      $first: "$owner",
-                    },
-                  },
-                },
-              ],
-            },
+        as: "videoDetails",
+      },
+    },
+    {
+      $unwind: "$videoDetails",
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "videoDetails.videoOwner",
+        foreignField: "_id",
+        as: "videoDetails.owner",
+      },
+    },
+    {
+      $unwind: "$videoDetails.owner",
+    },
+    {
+      $project: {
+        _id: 0,
+        watchedAt: "$watchHistory.watchedAt",
+        video: {
+          _id: "$videoDetails._id",
+          title: "$videoDetails.title",
+          thumbnail: "$videoDetails.thumbnail",
+          duration: "$videoDetails.duration",
+          owner: {
+            _id: "$videoDetails.owner._id",
+            fullName: "$videoDetails.owner.fullName",
+            username: "$videoDetails.owner.username",
+            avatar: "$videoDetails.owner.avatar",
           },
-        ],
+        },
+      },
+    },
+    {
+      $sort: {
+        watchedAt: -1,
       },
     },
   ]);
-  // if (!watchHistory) {
-  //   return res
-  //     .status(200)
-  //     .json(
-  //       new ApiResponse(
-  //         200,
-  //         user[0].watchHistory,
-  //         "You haven't watched any video yet..."
-  //       )
-  //     );
-  // }
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        user[0].watchHistory,
-        "Watch history fetched successfully"
+        userWatchHistory,
+        userWatchHistory.length > 0
+          ? "Watch history fetched successfully"
+          : "You haven't watched any video yet..."
       )
     );
 });
