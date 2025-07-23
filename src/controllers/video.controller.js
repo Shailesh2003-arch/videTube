@@ -10,58 +10,70 @@ import { uploadOnCloudinary } from "../services/cloudinary.js";
 
 // Controller for getting all video based on query, sort, pagination...
 
-// FIXME: Will fix this a little later as will need to add pagination sorting and all...
+// [Clean]: Will fix this a little later as will need to add pagination sorting and all...
 const getAllVideos = asyncErrorHandler(async (req, res) => {
-  //TODO: get all videos based on query, sort, pagination
-  const { query, sortBy, sortType, userId } = req.query;
+  const {
+    query = "",
+    sortBy = "createdAt",
+    sortType = "desc",
+    userId,
+  } = req.query;
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 5;
   const skip = (page - 1) * limit;
 
   if (!userId) {
-    throw new ApiError(400, "UserId missing");
+    throw new ApiError(400, "UserId is required");
   }
 
   const user = await User.findById(userId);
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-  // const allVideos = await Video.aggregate([
-  //   {
-  //     $match: {
-  //       videoOwner: new mongoose.Types.ObjectId(req.user._id),
-  //     },
-  //   },
-  //   { $sort: { createdAt: -1 } },
-  // ]);
-  // if (!allVideos) {
-  //   throw new ApiError(404, "No videos found");
-  // }
 
-  const allVideos = await Video.find(
-    { videoOwner: userId },
-    {
-      thumbnail: 1,
-      videoFile: 1,
-      title: 1,
-      description: 1,
-      duration: 1,
-      views: 1,
-      videoOwner: 1,
-      createdAt: 1,
-    }
-  )
-    .sort({ createdAt: -1 })
+  // Sort direction
+  const sortOrder = sortType === "asc" ? 1 : -1;
+
+  // Create filter for title-based search (case insensitive)
+  const filter = {
+    videoOwner: userId,
+    title: { $regex: query, $options: "i" },
+  };
+
+  // Fetch total count for pagination
+  const totalVideos = await Video.countDocuments(filter);
+
+  const allVideos = await Video.find(filter, {
+    thumbnail: 1,
+    videoFile: 1,
+    title: 1,
+    description: 1,
+    duration: 1,
+    views: 1,
+    videoOwner: 1,
+    createdAt: 1,
+  })
+    .sort({ [sortBy]: sortOrder })
     .skip(skip)
     .limit(limit);
 
-  if (!allVideos) {
+  if (!allVideos || allVideos.length === 0) {
     throw new ApiError(404, "No videos found");
   }
 
-  res
-    .status(200)
-    .json(new ApiResponse(200, allVideos, "All videos fetched successfully"));
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        videos: allVideos,
+        total: totalVideos,
+        page,
+        limit,
+        totalPages: Math.ceil(totalVideos / limit),
+      },
+      "All videos fetched successfully"
+    )
+  );
 });
 
 // Controller for publishing a video...
