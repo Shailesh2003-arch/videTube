@@ -11,8 +11,9 @@ import {
 
 const router = Router();
 
+router.use(verifyJWT);
+
 router.route("/upload").post(
-  verifyJWT,
   upload.fields([
     {
       name: "thumbnail",
@@ -26,13 +27,12 @@ router.route("/upload").post(
   publishAVideo
 );
 
-router.route("/vId/:videoId").get(verifyJWT, getVideoById);
+// FIXME: Iska route dekhlena inside postman...
+
+router.route("/").get(getAllVideos);
+router.route("/vId/:videoId").get(getVideoById);
 router
   .route("/vId/:videoId")
-  .patch(verifyJWT, upload.single("thumbnail"), updateVideoDetails);
-router.route("/vId/:videoId").delete(verifyJWT, deleteVideo);
-
-// FIXME: Iska route dekhlena inside postman...
-router.route("/allVideos").get(verifyJWT, getAllVideos);
-
+  .patch(upload.single("thumbnail"), updateVideoDetails);
+router.route("/vId/:videoId").delete(deleteVideo);
 export default router;
