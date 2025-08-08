@@ -17,18 +17,13 @@ const userSchema = new Schema(
       required: true,
       lowercase: true,
     },
-    fullName: {
-      type: String,
-      required: true,
-      index: true,
-    },
-    avatar: {
-      type: String, //cloudinary...
-      required: true,
-    },
-    coverImage: {
-      type: String, //cloudinary...
-    },
+    // avatar: {
+    //   type: String, //cloudinary...
+    //   // required: true,
+    // },
+    // coverImage: {
+    //   type: String, //cloudinary...
+    // },
     watchHistory: [
       {
         video: {
@@ -48,7 +43,6 @@ const userSchema = new Schema(
     },
     refreshToken: {
       type: String,
-      // required: [true, "Refresh token is required!..."],
     },
   },
   { timestamps: true }
