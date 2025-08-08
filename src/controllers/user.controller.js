@@ -18,16 +18,11 @@ const registerUser = asyncErrorHandler(async (req, res) => {
   // 6. create user-object and create entry in db.
   // 7. remove password and refresh token field from response.
   // 8. check for user-created or not, if created, then return response.
-  const { username, email, fullName, password } = req.body;
+  const { username, email, password } = req.body;
   const errors = [];
   if (!username)
     errors.push({ field: "username", message: "Username is required" });
   if (!email) errors.push({ field: "email", message: "email is required" });
-  if (!fullName)
-    errors.push({
-      field: "fullName",
-      message: "full name is required",
-    });
   if (!password)
     errors.push({ field: "password", message: "Password is required" });
 
@@ -42,34 +37,10 @@ const registerUser = asyncErrorHandler(async (req, res) => {
   if (existedUser) {
     throw new ApiError(409, "User with this email or username already exists!");
   }
-
-  const avatarLocalPath = req.files?.avatar[0]?.path;
-  // const coverImageLocalPath = req.files?.coverImage[0]?.path;
-
-  let coverImageLocalPath;
-  if (
-    req.files &&
-    Array.isArray(req.files.coverImage) &&
-    req.files.coverImage.length > 0
-  ) {
-    coverImageLocalPath = req.files.coverImage[0].path;
-  }
-
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar file is required");
-  }
-
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-
-  if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
-  }
-
   const user = await User.create({
     fullName,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "",
+    // avatar: avatar.url,
+    // coverImage: coverImage?.url || "",
     email,
     username: username.toLowerCase(),
     password,
@@ -95,10 +66,10 @@ const loginUser = asyncErrorHandler(async (req, res) => {
 
   // [AFTER]: Benefit - If by any chance user enters whitespace at the end we will trim it...
 
-  const username = req.body.username?.trim();
+  const email = req.body.username?.trim();
   const password = req.body.password?.trim();
 
-  if (!username) {
+  if (!email) {
     throw new ApiError(400, "username is required!");
   }
 
