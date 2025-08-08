@@ -38,7 +38,6 @@ const registerUser = asyncErrorHandler(async (req, res) => {
     throw new ApiError(409, "User with this email or username already exists!");
   }
   const user = await User.create({
-    fullName,
     // avatar: avatar.url,
     // coverImage: coverImage?.url || "",
     email,
