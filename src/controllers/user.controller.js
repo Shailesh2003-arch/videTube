@@ -7,6 +7,8 @@ import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
 
+// [PENDING] : "Jab user delete hojaye toh usne post ki hui saari videos and posts bhi delete hojani chahiye..."
+
 // [CLEAN]
 // Register user functionality...
 const registerUser = asyncErrorHandler(async (req, res) => {
@@ -18,13 +20,15 @@ const registerUser = asyncErrorHandler(async (req, res) => {
   // 6. create user-object and create entry in db.
   // 7. remove password and refresh token field from response.
   // 8. check for user-created or not, if created, then return response.
-  const { username, email, password } = req.body;
+  const { username, email, password, fullName } = req.body;
   const errors = [];
   if (!username)
     errors.push({ field: "username", message: "Username is required" });
   if (!email) errors.push({ field: "email", message: "email is required" });
   if (!password)
     errors.push({ field: "password", message: "Password is required" });
+  if (!fullName)
+    errors.push({ field: "fullName", message: "fullName is required" });
 
   if (errors.length > 0) {
     throw new ApiError(400, "All fields are required", errors);
@@ -41,6 +45,7 @@ const registerUser = asyncErrorHandler(async (req, res) => {
     // avatar: avatar.url,
     // coverImage: coverImage?.url || "",
     email,
+    fullName,
     username: username.toLowerCase(),
     password,
   });
@@ -65,14 +70,14 @@ const loginUser = asyncErrorHandler(async (req, res) => {
 
   // [AFTER]: Benefit - If by any chance user enters whitespace at the end we will trim it...
 
-  const email = req.body.username?.trim();
+  const email = req.body.email?.trim();
   const password = req.body.password?.trim();
 
   if (!email) {
     throw new ApiError(400, "username is required!");
   }
 
-  const user = await User.findOne({ username });
+  const user = await User.findOne({ email });
 
   if (!user) {
     throw new ApiError(404, "User does not exist!");
@@ -420,6 +425,7 @@ const getUserWatchHistory = asyncErrorHandler(async (req, res) => {
       $project: {
         _id: 0,
         watchedAt: "$watchHistory.watchedAt",
+        createdAt: "$videoDetails.createdAt",
         video: {
           _id: "$videoDetails._id",
           title: "$videoDetails.title",
