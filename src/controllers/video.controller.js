@@ -7,10 +7,11 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { v2 as cloudinary } from "cloudinary";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
+import getPublicIdFromUrl from "../utils/extractPublicUrl.js";
 
 // Controller for getting all video based on query, sort, pagination...
 
-// [Clean]: Will fix this a little later as will need to add pagination sorting and all...
+// [CLEAN]: Will fix this a little later as will need to add pagination sorting and all...
 const getAllVideos = asyncErrorHandler(async (req, res) => {
   const {
     query = "",
@@ -95,6 +96,7 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
   if (!description) {
     throw new ApiError(400, "description is required");
   }
+  console.log(req.files);
   const thumbnailLocalFilePath = req.files?.thumbnail[0]?.path;
   const videoFileLocalPath = req.files?.videoFile[0]?.path;
 
@@ -129,7 +131,7 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
 
   res
     .status(201)
-    .json(new ApiResponse(200, { videoObj }, "Video published Successfully"));
+    .json(new ApiResponse(200, videoObj, "Video published Successfully"));
 });
 
 // Controller for getting the video by its id...
@@ -199,28 +201,33 @@ const updateVideoDetails = asyncErrorHandler(async (req, res) => {
     throw new ApiError(400, "Description is required");
   }
   const thumbnailFileLocalPath = req.file?.path;
-  if (!thumbnailFileLocalPath) {
-    throw new ApiError(400, "Thumbnail is required");
-  }
-  const existingThumbnailFile = video.thumbnail;
-  const parts = existingThumbnailFile.split("/upload/")[1];
-  const existingThumbnailFileWithExtension = parts.split(".")[0];
-  const publicId = existingThumbnailFileWithExtension.replace(/^v\d+\//, "");
-  const uploadedThumbnailFile = await uploadOnCloudinary(
-    thumbnailFileLocalPath
-  );
 
-  await cloudinary.uploader.destroy(publicId);
+  let uploadedThumbnailFileUrl = video.thumbnail; // default = existing
+
+  if (thumbnailFileLocalPath) {
+    const existingThumbnailFile = video.thumbnail;
+    const parts = existingThumbnailFile.split("/upload/")[1];
+    const existingThumbnailFileWithExtension = parts.split(".")[0];
+    const publicId = existingThumbnailFileWithExtension.replace(/^v\d+\//, "");
+
+    const uploadedThumbnailFile = await uploadOnCloudinary(
+      thumbnailFileLocalPath
+    );
+    await cloudinary.uploader.destroy(publicId);
+
+    uploadedThumbnailFileUrl = uploadedThumbnailFile.url;
+  }
 
   video.title = title;
   video.description = description;
-  video.thumbnail = uploadedThumbnailFile.url;
+  video.thumbnail = uploadedThumbnailFileUrl;
+
   await video.save({ validateBeforeSave: false });
 
   const videoData = {
     title: video.title,
     description: video.description,
-    thumbnail: uploadedThumbnailFile.url,
+    thumbnail: uploadedThumbnailFileUrl,
   };
   res
     .status(200)
@@ -243,24 +250,59 @@ const deleteVideo = asyncErrorHandler(async (req, res) => {
     throw new ApiError(404, "Video not found");
   }
 
-  // grabbing the existing thumbnail file uploaded on cloudinary so we can flush it...
-  const existingThumbnailFile = video.thumbnail;
-  const parts = existingThumbnailFile.split("/upload/")[1];
-  const existingThumbnailFileWithExtension = parts.split(".")[0];
-  const publicId = existingThumbnailFileWithExtension.replace(/^v\d+\//, "");
+  const videoPublicId = getPublicIdFromUrl(video.videoFile);
+  const thumbnailPublicId = getPublicIdFromUrl(video.thumbnail);
 
-  // grabbing the existing video file uploaded on cloudinary so we can flush it...
-  const existingVideoFile = video.videoFile;
-  const partsOfVideo = existingVideoFile.split("/upload/")[1];
-  const existingVideoFileWithExtension = partsOfVideo.split(".")[0];
-  const publicIdOfVideo = existingVideoFileWithExtension.replace(/^v\d+\//, "");
+  console.log(videoPublicId);
 
-  await cloudinary.uploader.destroy(publicId);
-  await cloudinary.uploader.destroy(publicIdOfVideo, {
+  console.log(thumbnailPublicId);
+
+  await cloudinary.uploader.destroy(thumbnailPublicId);
+  await cloudinary.uploader.destroy(videoPublicId, {
     resource_type: "video",
   });
   await video.deleteOne();
-  res.status(204).send();
+  res.status(200).json(new ApiResponse(200, {}, "Video deleted Successfully"));
+});
+
+const getHomePageVideos = asyncErrorHandler(async (req, res) => {
+  let { page = 1, limit = 10 } = req.query;
+  page = parseInt(page);
+  limit = parseInt(limit);
+  const skip = (page - 1) * limit;
+  const videos = await Video.find(
+    {},
+    {
+      thumbnail: 1,
+      title: 1,
+      duration: 1,
+      views: 1,
+      createdAt: 1,
+      videoFile: 1,
+    }
+  )
+    .populate("videoOwner", "username avatar")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const totalVideos = await Video.countDocuments();
+  res.status(200).json({
+    success: true,
+    currentPage: page,
+    totalPages: Math.ceil(totalVideos / limit),
+    totalVideos,
+    videos,
+  });
+});
+
+const getUserUploadedVideos = asyncErrorHandler(async (req, res) => {
+  const videos = await Video.find({ videoOwner: req.user._id }).sort({
+    createdAt: -1,
+  });
+  res
+    .status(200)
+    .json(new ApiResponse(200, videos, "Videos fetched successfully"));
 });
 
 export {
@@ -269,4 +311,6 @@ export {
   updateVideoDetails,
   deleteVideo,
   getAllVideos,
+  getHomePageVideos,
+  getUserUploadedVideos,
 };

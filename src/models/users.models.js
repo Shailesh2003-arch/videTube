@@ -17,6 +17,10 @@ const userSchema = new Schema(
       required: true,
       lowercase: true,
     },
+    fullName: {
+      type: String,
+      required: true,
+    },
     // avatar: {
     //   type: String, //cloudinary...
     //   // required: true,
