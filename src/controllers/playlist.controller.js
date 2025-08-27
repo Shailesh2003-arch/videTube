@@ -191,7 +191,7 @@ const getUserPlaylists = asyncErrorHandler(async (req, res) => {
       updatedAt: 1,
       _id: 1,
     }
-  );
+  ).sort({ createdAt: -1 });
 
   if (!allPlaylists || allPlaylists.length === 0) {
     throw new ApiError(404, "No playlists found for this user");
