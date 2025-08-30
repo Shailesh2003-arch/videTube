@@ -96,7 +96,6 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
   if (!description) {
     throw new ApiError(400, "description is required");
   }
-  console.log(req.files);
   const thumbnailLocalFilePath = req.files?.thumbnail[0]?.path;
   const videoFileLocalPath = req.files?.videoFile[0]?.path;
 
