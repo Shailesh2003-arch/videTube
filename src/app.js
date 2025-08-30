@@ -1,8 +1,38 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+// import { createServer } from "http";
+// import { Server } from "socket.io";
+
 // instiating an app
 const app = express();
+
+// [PENDING]
+// const httpServer = createServer(app);
+// socket.io attach karte hain
+// const io = new Server(httpServer, {
+//   cors: {
+//     origin: "http://localhost:5173",
+//     credentials: true,
+//   },
+// });
+
+// // global use ke liye
+// global.io = io;
+
+// io.on("connection", (socket) => {
+//   console.log("⚡ Client connected:", socket.id);
+
+//   socket.on("join", (userId) => {
+//     socket.join(userId);
+//     console.log(`✅ User ${userId} joined their room`);
+//   });
+
+//   socket.on("disconnect", () => {
+//     console.log("❌ Client disconnected:", socket.id);
+//   });
+// });
+
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
@@ -45,4 +75,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-export { app };
+export { app /* httpServer, io*/ };
