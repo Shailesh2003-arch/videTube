@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { Playlist } from "../models/playlist.models.js";
 import { User } from "../models/users.models.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
+import { uploadOnCloudinary } from "../services/cloudinary.js";
 import mongoose from "mongoose";
 
 // create a playlist...
@@ -18,21 +19,30 @@ const createPlaylist = asyncErrorHandler(async (req, res) => {
   if (!description) {
     throw new ApiError(400, "Description of the playlist is required");
   }
+  const thumbnailLocalFilePath = req.file?.path;
+  if (!thumbnailLocalFilePath) {
+    throw new ApiError(400, "Thumbnail is required");
+  }
+
+  const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalFilePath);
+  console.log(`Uploaded Thumbnail file info:`, uploadedThumbnail);
+
   const newPlaylist = await Playlist.create({
     name,
     description,
+    thumbnail: uploadedThumbnail.secure_url || uploadedThumbnail.url,
     owner,
   });
+  // console.log(newPlaylist);
   // [AFTER] : added only required data in response object...
-  const playListObject = newPlaylist.toObject();
-  delete playListObject.updatedAt;
-  delete playListObject.__v;
+  // const playListObject = newPlaylist.toObject();
+  // delete playListObject.updatedAt;
+  // delete playListObject.__v;
+  // const playListObject = newPlaylist.toObject();
 
   res
     .status(201)
-    .json(
-      new ApiResponse(200, playListObject, "Playlist created successfully")
-    );
+    .json(new ApiResponse(200, newPlaylist, "Playlist created successfully"));
 });
 
 // add video to a playList...
@@ -52,7 +62,7 @@ const addVideoToPlaylist = asyncErrorHandler(async (req, res) => {
       $addToSet: { videos: videoId },
     },
     { new: true }
-  );
+  ).sort({ createdAt: -1 });
 
   // [AFTER]: added only required data to the response object...
   const updatedPlaylistObj = updatedPlaylist.toObject();
@@ -110,21 +120,23 @@ const removeVideoFromAPlaylist = asyncErrorHandler(async (req, res) => {
 // [CLEAN]
 const getPlaylistById = asyncErrorHandler(async (req, res) => {
   const { playlistId } = req.params;
+
   if (!playlistId) {
-    throw new ApiError(400, "Playlist Id is required");
+    throw new ApiError(400, "Playlist Id required");
   }
-  const playList = await Playlist.findById(playlistId);
-  const playListObject = playList.toObject();
-  delete playListObject.__v;
-  delete playListObject.updatedAt;
-  if (!playList) {
+
+  // find playlist and populate videos with required fields
+  const playlist = await Playlist.findById(playlistId)
+    .populate("videos", "title description thumbnail duration") // only required fields
+    .select("-__v -updatedAt"); // extra cleanup if you want
+
+  if (!playlist) {
     throw new ApiError(404, "Playlist not found");
   }
+
   res
     .status(200)
-    .json(
-      new ApiResponse(200, playListObject, "Playlist fetched successfully")
-    );
+    .json(new ApiResponse(200, playlist, "Playlist fetched successfully"));
 });
 
 // delete a playlist...
@@ -172,7 +184,6 @@ const updatePlaylistDetails = asyncErrorHandler(async (req, res) => {
 // [CLEAN]
 const getUserPlaylists = asyncErrorHandler(async (req, res) => {
   const { userId } = req.params;
-  console.log(userId);
   if (!userId) {
     throw new ApiError(400, "User-Id is required");
   }
@@ -186,6 +197,7 @@ const getUserPlaylists = asyncErrorHandler(async (req, res) => {
     {
       name: 1,
       description: 1,
+      thumbnail: 1,
       videos: 1,
       createdAt: 1,
       updatedAt: 1,
@@ -193,14 +205,18 @@ const getUserPlaylists = asyncErrorHandler(async (req, res) => {
     }
   ).sort({ createdAt: -1 });
 
-  if (!allPlaylists || allPlaylists.length === 0) {
-    throw new ApiError(404, "No playlists found for this user");
-  }
+  // if (!allPlaylists || allPlaylists.length === 0) {
+  //   throw new ApiError(404, "No playlists found for this user");
+  // }
 
   res
     .status(200)
     .json(
-      new ApiResponse(200, allPlaylists, "Fetched all playlists by this user")
+      new ApiResponse(
+        200,
+        allPlaylists || [],
+        "Fetched all playlists by this user"
+      )
     );
 });
 
