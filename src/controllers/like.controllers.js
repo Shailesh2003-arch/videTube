@@ -5,7 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
 import { Tweet } from "../models/tweets.models.js";
 import { Comment } from "../models/comments.models.js";
-
+import { Notification } from "../models/notification.models.js";
 // toggle videoLike...
 const toggleVideoLike = asyncErrorHandler(async (req, res) => {
   const { videoId } = req.params;
@@ -23,7 +23,7 @@ const toggleVideoLike = asyncErrorHandler(async (req, res) => {
     video: videoId,
   });
   if (likedAlready) {
-    await Like.deleteOne({ likedBy: likedByUser });
+    await Like.deleteOne({ likedBy: likedByUser, video: videoId });
     return res
       .status(200)
       .json(new ApiResponse(200, "Video unliked successfully"));
@@ -32,6 +32,25 @@ const toggleVideoLike = asyncErrorHandler(async (req, res) => {
     video: videoId,
     likedBy: likedByUser,
   });
+
+  //[PENDING]
+  // await Notification.create({
+  //   reciepent: video.videoOwner,
+  //   sender: likedByUser,
+  //   type: "videoLike",
+  //   video: videoId,
+  //   message: `${req.user.username} liked your video`,
+  // });
+
+  // if (global.io) {
+  //   global.io.to(video.videoOwner.toString()).emit("notification", {
+  //     type: "videoLike",
+  //     sender: req.user.username,
+  //     videoId,
+  //     message: `${req.user.username} liked your video`,
+  //   });
+  // }
+
   // [AFTER]: add only required data to response object...
   const newLikeObj = newLike.toObject();
   delete newLikeObj.__v;
