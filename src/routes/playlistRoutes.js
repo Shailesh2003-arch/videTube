@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/multer.js";
 import {
   createPlaylist,
   addVideoToPlaylist,
@@ -14,7 +15,7 @@ const router = Router();
 
 router.use(verifyJWT);
 
-router.route("/").post(createPlaylist);
+router.route("/").post(upload.single("thumbnail"), createPlaylist);
 router.route("/add/:playlistId/:videoId").patch(addVideoToPlaylist);
 router.route("/remove/:playlistId/:videoId").patch(removeVideoFromAPlaylist);
 
