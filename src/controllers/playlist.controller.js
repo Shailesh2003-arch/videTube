@@ -4,6 +4,7 @@ import { Playlist } from "../models/playlist.models.js";
 import { User } from "../models/users.models.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
+import cloudinary from "cloudinary";
 import mongoose from "mongoose";
 
 // create a playlist...
@@ -30,15 +31,12 @@ const createPlaylist = asyncErrorHandler(async (req, res) => {
   const newPlaylist = await Playlist.create({
     name,
     description,
-    thumbnail: uploadedThumbnail.secure_url || uploadedThumbnail.url,
+    thumbnail: {
+      url: uploadedThumbnail.secure_url || uploadedThumbnail.url,
+      public_id: uploadedThumbnail.public_id,
+    },
     owner,
   });
-  // console.log(newPlaylist);
-  // [AFTER] : added only required data in response object...
-  // const playListObject = newPlaylist.toObject();
-  // delete playListObject.updatedAt;
-  // delete playListObject.__v;
-  // const playListObject = newPlaylist.toObject();
 
   res
     .status(201)
@@ -158,21 +156,48 @@ const updatePlaylistDetails = asyncErrorHandler(async (req, res) => {
   const { playlistId } = req.params;
   const name = req.body.name?.trim();
   const description = req.body.description?.trim();
+
   if (!playlistId) {
     throw new ApiError(400, "Playlist Id required");
   }
+
+  // Get old playlist first to know old thumbnail
+  const oldPlaylist = await Playlist.findById(playlistId);
+  if (!oldPlaylist) {
+    throw new ApiError(404, "Playlist not found");
+  }
+
+  let thumbnailUrl = oldPlaylist.thumbnail?.url;
+  let publicId = oldPlaylist.thumbnail?.public_id;
+
+  if (req.file) {
+    // destroy old thumbnail
+    if (publicId) {
+      await cloudinary.uploader.destroy(publicId);
+    }
+
+    // upload new one
+    const uploadedThumbnail = await uploadOnCloudinary(req.file.path);
+    thumbnailUrl = uploadedThumbnail.secure_url || uploadedThumbnail.url;
+    publicId = uploadedThumbnail.public_id;
+  }
+
   const updatedDetails = await Playlist.findByIdAndUpdate(
     playlistId,
     {
-      name,
-      description,
+      name: name || oldPlaylist.name,
+      description: description || oldPlaylist.description,
+      thumbnail: {
+        url: thumbnailUrl,
+        public_id: publicId,
+      },
     },
     { new: true }
   );
 
   const updatedDetailsObj = updatedDetails.toObject();
   delete updatedDetailsObj.__v;
-  // [AFTER]: add only required data to response object...
+
   res
     .status(200)
     .json(
