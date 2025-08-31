@@ -11,8 +11,8 @@ const playlistSchema = new Schema(
       required: true,
     },
     thumbnail: {
-      type: String,
-      required: true,
+      url: { type: String, required: true },
+      public_id: { type: String },
     },
     videos: [
       {
