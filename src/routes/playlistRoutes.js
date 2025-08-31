@@ -23,7 +23,7 @@ router
   .route("/:playlistId")
   .get(getPlaylistById)
   .delete(deletePlaylist)
-  .patch(updatePlaylistDetails);
+  .patch(upload.single("thumbnail"), updatePlaylistDetails);
 
 router.route("/user/:userId").get(getUserPlaylists);
 
