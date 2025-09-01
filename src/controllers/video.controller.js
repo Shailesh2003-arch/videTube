@@ -8,6 +8,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { v2 as cloudinary } from "cloudinary";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
 import getPublicIdFromUrl from "../utils/extractPublicUrl.js";
+import { Playlist } from "../models/playlist.models.js";
 
 // Controller for getting all video based on query, sort, pagination...
 
@@ -260,6 +261,13 @@ const deleteVideo = asyncErrorHandler(async (req, res) => {
   await cloudinary.uploader.destroy(videoPublicId, {
     resource_type: "video",
   });
+
+  // Playlist cleanup
+  await Playlist.updateMany(
+    { videos: videoId },
+    { $pull: { videos: videoId } }
+  );
+
   await video.deleteOne();
   res.status(200).json(new ApiResponse(200, {}, "Video deleted Successfully"));
 });
