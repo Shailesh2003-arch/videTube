@@ -145,9 +145,20 @@ const deletePlaylist = asyncErrorHandler(async (req, res) => {
     throw new ApiError(400, "Playlist Id is required");
   }
 
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(404, "Playlist not found");
+  }
+
+  if (playlist.thumbnail?.public_id) {
+    await cloudinary.uploader.destroy(playlist.thumbnail.public_id);
+  }
+
   await Playlist.findByIdAndDelete(playlistId);
   // [AFTER]: REST standard followed for deleting...
-  res.status(204).send();
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Playlist deleted successfully"));
 });
 
 // update playlist through ID...
