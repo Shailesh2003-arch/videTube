@@ -273,33 +273,37 @@ const deleteVideo = asyncErrorHandler(async (req, res) => {
 });
 
 const getHomePageVideos = asyncErrorHandler(async (req, res) => {
-  let { page = 1, limit = 10 } = req.query;
-  page = parseInt(page);
-  limit = parseInt(limit);
-  const skip = (page - 1) * limit;
-  const videos = await Video.find(
-    {},
-    {
-      thumbnail: 1,
-      title: 1,
-      duration: 1,
-      views: 1,
-      createdAt: 1,
-      videoFile: 1,
-    }
-  )
-    .populate("videoOwner", "username avatar")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  const { limit = 10, cursor } = req.query;
 
-  const totalVideos = await Video.countDocuments();
+  let query = {};
+  if (cursor) {
+    // sirf un videos ko lao jo cursor se purane hain
+    query = { _id: { $lt: cursor } };
+  }
+
+  let videos = await Video.find(query, {
+    thumbnail: 1,
+    title: 1,
+    duration: 1,
+    views: 1,
+    createdAt: 1,
+    videoFile: 1,
+  })
+    .populate("videoOwner", "username avatar")
+    .sort({ _id: -1 }) // naya pehle
+    .limit(Number(limit) + 1); // ek extra leke check karenge
+
+  let nextCursor = null;
+  if (videos.length > limit) {
+    const nextItem = videos[limit];
+    nextCursor = nextItem._id;
+    videos = videos.slice(0, limit);
+  }
+
   res.status(200).json({
     success: true,
-    currentPage: page,
-    totalPages: Math.ceil(totalVideos / limit),
-    totalVideos,
     videos,
+    nextCursor, // frontend isse next batch fetch karega
   });
 });
 
