@@ -31,7 +31,7 @@ const registerUser = asyncErrorHandler(async (req, res) => {
     errors.push({ field: "fullName", message: "fullName is required" });
 
   if (errors.length > 0) {
-    throw new ApiError(400, "All fields are required", errors);
+    throw new ApiError(400, "Validation failed", errors);
   }
 
   const existedUser = await User.findOne({
@@ -60,7 +60,7 @@ const registerUser = asyncErrorHandler(async (req, res) => {
 
   res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User created successfully"));
+    .json(new ApiResponse(201, createdUser, "User created successfully"));
 });
 
 // login functionality
