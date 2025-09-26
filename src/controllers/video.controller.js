@@ -285,6 +285,7 @@ const getHomePageVideos = asyncErrorHandler(async (req, res) => {
     thumbnail: 1,
     title: 1,
     duration: 1,
+    description: 1,
     views: 1,
     createdAt: 1,
     videoFile: 1,
