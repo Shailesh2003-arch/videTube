@@ -1,13 +1,49 @@
 import dotenv from "dotenv";
 dotenv.config({ path: "./src/.env" });
 import connectDB from "./db/index.js";
+import { createServer } from "http";
+import { Server } from "socket.io"
 
 const hostname = "127.0.0.1";
-const port = process.env.PORT || 4000;
-import { app /* httpServer*/ } from "./app.js";
+import {  app } from "./app.js";
+
+
+const httpServer = createServer(app);
+
+
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    credentials: true,
+  },
+});
+
+global.io = io;
+
+io.on("connection", (socket) => {
+  console.log("⚡ Client connected:", socket.id);
+
+  // when frontend joins a room
+  socket.on("joinVideoRoom", (videoId) => {
+    socket.join(videoId);
+    console.log(`🎥 Client joined video room: ${videoId}`);
+  });
+
+  // optional — you can later use this for tracking live viewers
+  socket.on("leaveVideoRoom", (videoId) => {
+    socket.leave(videoId);
+    console.log(`🚪 Client left video room: ${videoId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("❌ Client disconnected:", socket.id);
+  });
+});
+
+
 connectDB()
   .then(() => {
-    app.listen(process.env.PORT, hostname, () => {
+    httpServer.listen(process.env.PORT, hostname, () => {
       console.log(
         `Server listening to requests on Port ${process.env.PORT}...`
       );
@@ -26,3 +62,5 @@ process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection:", err);
   process.exit(1);
 });
+
+export { io };
