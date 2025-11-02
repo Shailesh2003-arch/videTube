@@ -7,59 +7,87 @@ import { Tweet } from "../models/tweets.models.js";
 import { Comment } from "../models/comments.models.js";
 import { Notification } from "../models/notification.models.js";
 // toggle videoLike...
-const toggleVideoLike = asyncErrorHandler(async (req, res) => {
+const toggleVideoReaction = asyncErrorHandler(async (req, res) => {
   const { videoId } = req.params;
-  const likedByUser = req.user._id;
+  const { type } = req.body; // 'like' or 'dislike'
+  console.log(type)
+  const userId = req.user._id;
+
   if (!videoId) {
-    throw new ApiError(400, "video-Id required");
+    throw new ApiError(400, "Video ID is required");
   }
+
+  if (!["like", "dislike"].includes(type)) {
+    throw new ApiError(400, "Invalid reaction type");
+  }
+
   const video = await Video.findById(videoId);
   if (!video) {
     throw new ApiError(404, "Video not found!");
   }
 
-  const likedAlready = await Like.findOne({
-    likedBy: likedByUser,
+  // check if user already reacted to this video
+  const existingReaction = await Like.findOne({
     video: videoId,
+    likedBy: userId,
   });
-  if (likedAlready) {
-    await Like.deleteOne({ likedBy: likedByUser, video: videoId });
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "Video unliked successfully"));
+
+  let message = "";
+
+  if (existingReaction) {
+    if (existingReaction.type === type) {
+      // same reaction again -> remove (toggle off)
+      await existingReaction.deleteOne();
+      message = `${type} removed successfully`;
+    } else {
+      // opposite reaction -> update
+      existingReaction.type = type;
+      await existingReaction.save();
+      message = `${type} updated successfully`;
+    }
+  } else {
+    // first-time reaction
+    await Like.create({ video: videoId, likedBy: userId, type });
+    message = `${type} added successfully`;
+
+    if (type === "like" && String(video.videoOwner._id) !== String(userId)) {
+      const notification = await Notification.create({
+        reciepent: video.videoOwner._id,
+        sender: userId,
+        type: "videoLike",
+        video: videoId,
+        message: `${req.user.username} liked your video "${video.title}"`,
+      });
+      if (global.io) {
+        global.io
+          .to(video.videoOwner._id.toString())
+          .emit("notification", notification);
+      }
+    }
   }
-  const newLike = await Like.create({
+
+  // 🧮 Get updated counts
+  const likeCount = await Like.countDocuments({ video: videoId, type: "like" });
+  const dislikeCount = await Like.countDocuments({
     video: videoId,
-    likedBy: likedByUser,
+    type: "dislike",
   });
 
-  //[PENDING]
-  // await Notification.create({
-  //   reciepent: video.videoOwner,
-  //   sender: likedByUser,
-  //   type: "videoLike",
-  //   video: videoId,
-  //   message: `${req.user.username} liked your video`,
-  // });
+  // 🔥 Emit real-time update (to all connected clients watching this video)
+  if (global.io) {
+     console.log("📢 Emitting likeDislikeUpdated for video:", videoId);
+    global.io.to(videoId).emit("likeDislikeUpdated", {
+      videoId,
+      likeCount,
+      dislikeCount,
+    });
+  }
 
-  // if (global.io) {
-  //   global.io.to(video.videoOwner.toString()).emit("notification", {
-  //     type: "videoLike",
-  //     sender: req.user.username,
-  //     videoId,
-  //     message: `${req.user.username} liked your video`,
-  //   });
-  // }
-
-  // [AFTER]: add only required data to response object...
-  const newLikeObj = newLike.toObject();
-  delete newLikeObj.__v;
-  delete newLikeObj.updatedAt;
-
-  res
+  return res
     .status(200)
-    .json(new ApiResponse(200, newLikeObj, "Video liked successfully"));
+    .json(new ApiResponse(200, { likeCount, dislikeCount }, message));
 });
+
 
 // getLiked videos by the user...
 // [CLEAN]
@@ -154,4 +182,4 @@ const toggleTweetLike = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, newLikeOnTweetObj, "Tweet liked successfully"));
 });
 
-export { toggleVideoLike, getLikedVideos, toggleCommentLike, toggleTweetLike };
+export { toggleVideoReaction, getLikedVideos, toggleCommentLike, toggleTweetLike };
