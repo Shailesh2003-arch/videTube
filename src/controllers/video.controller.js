@@ -3,6 +3,7 @@ import { Video } from "../models/videos.models.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
 import { Subscription } from "../models/subscriptions.models.js";
 import { User } from "../models/users.models.js";
+import { Like }  from "../models/likes.models.js"
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { v2 as cloudinary } from "cloudinary";
@@ -138,39 +139,76 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
 const getVideoById = asyncErrorHandler(async (req, res) => {
   const userId = req.user._id;
   const { videoId } = req.params;
+
   const video = await Video.findById(videoId).populate(
     "videoOwner",
     "username avatar fullName"
   );
-  if (!video) {
-    throw new ApiError(404, "Video not found");
-  }
-  //[AFTER]
+  if (!video) throw new ApiError(404, "Video not found");
+
   const user = await User.findById(userId);
+  if (!user) throw new ApiError(404, "User not found");
+
+  const now = new Date();
+  const THIRTY_MINUTES = 30 * 60 * 1000;
+
+  let shouldIncrementView = false;
   const existingIndex = user.watchHistory.findIndex((entry) =>
     entry.video.equals(videoId)
   );
 
   if (existingIndex !== -1) {
-    user.watchHistory[existingIndex].watchedAt = new Date();
-  } else {
-    user.watchHistory.push({ video: videoId });
-  }
-  await user.save({ validateBeforeSave: false });
+    const lastWatched = user.watchHistory[existingIndex].watchedAt;
+    const timeDiff = now - new Date(lastWatched);
 
-  let subscriberCount = await Subscription.countDocuments({
+    if (timeDiff >= THIRTY_MINUTES) {
+      shouldIncrementView = true;
+    }
+    user.watchHistory[existingIndex].watchedAt = now;
+  } else {
+    shouldIncrementView = true;
+    user.watchHistory.push({ video: videoId, watchedAt: now });
+  }
+
+  // ✅ Save both in sync
+  if (shouldIncrementView) {
+    video.views += 1;
+
+    await Promise.all([
+      video.save({ validateBeforeSave: false }),
+      user.save({ validateBeforeSave: false }),
+    ]);
+
+    // emit socket event after success
+    io.to(videoId).emit("viewCountUpdated", {
+      videoId,
+      newCount: video.views,
+    });
+  } else {
+    // even if view didn’t increment, update watch timestamp
+    await user.save({ validateBeforeSave: false });
+  }
+
+  const subscriberCount = await Subscription.countDocuments({
     channel: video.videoOwner._id,
   });
 
-  // [BEFORE]: Here firstly we were passing whole video object fetched from the DB as it is in the response...
+  const likeCount = await Like.countDocuments({ video: videoId, type:"like"});
+const dislikeCount = await Like.countDocuments({
+  video: videoId,
+  type: "dislike",
+});
+
   const videoData = {
     ...video._doc,
     videoOwner: {
       ...video.videoOwner._doc,
       subscriberCount,
     },
+    likeCount,
+    dislikeCount,
   };
-  // [AFTER]:Here we are just passing needed fields of requested video in the response.
+
   delete videoData.__v;
   delete videoData.updatedAt;
 
@@ -178,6 +216,8 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, videoData, "Video fetched successfully"));
 });
+
+
 
 // Controller for updating the details of the video such as it's title, description, and thumbnail file.
 const updateVideoDetails = asyncErrorHandler(async (req, res) => {
@@ -274,33 +314,37 @@ const deleteVideo = asyncErrorHandler(async (req, res) => {
 
 const getHomePageVideos = asyncErrorHandler(async (req, res) => {
   const { limit = 10, cursor } = req.query;
-
+  const parsedLimit = Number(limit);
   let query = {};
   if (cursor) {
     // sirf un videos ko lao jo cursor se purane hain
     query = { _id: { $lt: cursor } };
   }
 
-  let videos = await Video.find(query, {
-    thumbnail: 1,
-    title: 1,
-    duration: 1,
-    description: 1,
-    views: 1,
-    createdAt: 1,
-    videoFile: 1,
-  })
+  let videos = await Video.find(query)
+    .select("thumbnail title duration description views createdAt videoFile")
     .populate("videoOwner", "username avatar")
-    .sort({ _id: -1 }) // naya pehle
-    .limit(Number(limit) + 1); // ek extra leke check karenge
-
-  let nextCursor = null;
-  if (videos.length > limit) {
-    const nextItem = videos[limit];
-    nextCursor = nextItem._id;
-    videos = videos.slice(0, limit);
+    .sort({ _id: -1 })
+    .limit(parsedLimit + 1)
+    .lean(); 
+  
+  if (videos.length === 0) {
+    return res.status(200).json({
+      success: true,
+      videos: [],
+      nextCursor: null,
+      hasNextPage: false,
+      message: "No more videos to load",
+    });
   }
 
+  let nextCursor = null;
+   const hasNextPage = videos.length > parsedLimit;
+
+   if (hasNextPage) {
+     nextCursor = videos[parsedLimit]._id;
+     videos = videos.slice(0, parsedLimit);
+   }
   res.status(200).json({
     success: true,
     videos,
@@ -309,9 +353,11 @@ const getHomePageVideos = asyncErrorHandler(async (req, res) => {
 });
 
 const getUserUploadedVideos = asyncErrorHandler(async (req, res) => {
-  const videos = await Video.find({ videoOwner: req.user._id }).sort({
-    createdAt: -1,
-  });
+  
+  const videos = await Video.find({ videoOwner: req.user._id })
+    .select("title views duration createdAt")
+    .sort({ _id: -1 })
+    .lean();
   res
     .status(200)
     .json(new ApiResponse(200, videos, "Videos fetched successfully"));
