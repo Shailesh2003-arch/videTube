@@ -1,53 +1,24 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-// import { createServer } from "http";
-// import { Server } from "socket.io";
 
-// instiating an app
+// instantiate app
 const app = express();
 
-// [PENDING]
-// const httpServer = createServer(app);
-// socket.io attach karte hain
-// const io = new Server(httpServer, {
-//   cors: {
-//     origin: "http://localhost:5173",
-//     credentials: true,
-//   },
-// });
-
-// // global use ke liye
-// global.io = io;
-
-// io.on("connection", (socket) => {
-//   console.log("⚡ Client connected:", socket.id);
-
-//   socket.on("join", (userId) => {
-//     socket.join(userId);
-//     console.log(`✅ User ${userId} joined their room`);
-//   });
-
-//   socket.on("disconnect", () => {
-//     console.log("❌ Client disconnected:", socket.id);
-//   });
-// });
-
+// middlewares
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
     credentials: true,
   })
 );
 
-// for parsing incoming request body
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
-// for serving static files...
 app.use(express.static("public"));
 app.use(cookieParser());
 
-// [IMPORTS]
+// imports
 import userRouter from "./routes/userRoutes.js";
 import videoRouter from "./routes/videoRoutes.js";
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
@@ -55,9 +26,11 @@ import playlistRouter from "./routes/playlistRoutes.js";
 import likeRouter from "./routes/likeRoutes.js";
 import commentRouter from "./routes/commentRoutes.js";
 import tweetRouter from "./routes/tweetRoutes.js";
+import notificationRouter  from "./routes/notificationRoutes.js"
 
-// [ROUTES]
+// routes
 app.use("/api/v1/users", userRouter);
+app.use("api/v1/users/notifications",notificationRouter)
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/users/subscription", subscriptionRouter);
 app.use("/api/v1/likes", likeRouter);
@@ -65,7 +38,7 @@ app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/users/tweets", tweetRouter);
 app.use("/api/v1/users/playlist", playlistRouter);
 
-// [ERROR HANDLING MIDDLEWARE]
+// error handler
 app.use((err, req, res, next) => {
   res.status(err.statusCode || 500).json({
     success: false,
@@ -75,4 +48,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-export { app /* httpServer, io*/ };
+export { app };
