@@ -92,7 +92,7 @@ const loginUser = asyncErrorHandler(async (req, res) => {
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid user credentials");
   }
-  const { accessToken, refreshToken } = await generateAcessAndRefreshTokens(
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
     user._id
   );
   //
@@ -432,62 +432,68 @@ const updateCoverImage = asyncErrorHandler(async (req, res) => {
 
 // [AFTER]: fixed
 const getUserWatchHistory = asyncErrorHandler(async (req, res) => {
-  const userWatchHistory = await User.aggregate([
-    {
-      $match: {
-        _id: new mongoose.Types.ObjectId(req.user._id),
-      },
-    },
-    {
-      $unwind: "$watchHistory",
-    },
-    {
-      $lookup: {
-        from: "videos",
-        localField: "watchHistory.video",
-        foreignField: "_id",
-        as: "videoDetails",
-      },
-    },
-    {
-      $unwind: "$videoDetails",
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "videoDetails.videoOwner",
-        foreignField: "_id",
-        as: "videoDetails.owner",
-      },
-    },
-    {
-      $unwind: "$videoDetails.owner",
-    },
-    {
-      $project: {
-        _id: 0,
-        watchedAt: "$watchHistory.watchedAt",
-        createdAt: "$videoDetails.createdAt",
-        video: {
-          _id: "$videoDetails._id",
-          title: "$videoDetails.title",
-          thumbnail: "$videoDetails.thumbnail",
-          duration: "$videoDetails.duration",
-          owner: {
-            _id: "$videoDetails.owner._id",
-            fullName: "$videoDetails.owner.fullName",
-            username: "$videoDetails.owner.username",
-            avatar: "$videoDetails.owner.avatar",
-          },
-        },
-      },
-    },
-    {
-      $sort: {
-        watchedAt: -1,
-      },
-    },
-  ]);
+ const userWatchHistory = await User.aggregate([
+   {
+     $match: {
+       _id: new mongoose.Types.ObjectId(req.user._id),
+     },
+   },
+   {
+     $unwind: "$watchHistory",
+   },
+   {
+     $lookup: {
+       from: "videos",
+       localField: "watchHistory.video",
+       foreignField: "_id",
+       as: "videoDetails",
+     },
+   },
+   {
+     $unwind: {
+       path: "$videoDetails",
+       preserveNullAndEmptyArrays: true, // 💡 keeps entries even if video not found
+     },
+   },
+   {
+     $lookup: {
+       from: "users",
+       localField: "videoDetails.videoOwner",
+       foreignField: "_id",
+       as: "videoDetails.owner",
+     },
+   },
+   {
+     $unwind: {
+       path: "$videoDetails.owner",
+      //  preserveNullAndEmptyArrays: true, // 💡 same for owner
+     },
+   },
+   {
+     $project: {
+       _id: 0,
+       watchedAt: "$watchHistory.watchedAt",
+       createdAt: "$videoDetails.createdAt",
+       video: {
+         _id: "$videoDetails._id",
+         title: "$videoDetails.title",
+         thumbnail: "$videoDetails.thumbnail",
+         duration: "$videoDetails.duration",
+         views: "$videoDetails.views",
+         owner: {
+           _id: "$videoDetails.owner._id",
+           fullName: "$videoDetails.owner.fullName",
+           username: "$videoDetails.owner.username",
+           avatar: "$videoDetails.owner.avatar",
+         },
+       },
+     },
+   },
+   {
+     $sort: { watchedAt: -1 },
+   },
+ ]);
+  
   return res
     .status(200)
     .json(
