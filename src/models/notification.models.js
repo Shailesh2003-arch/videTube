@@ -14,7 +14,13 @@ const notificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ["videoLike", "videoComment", "postLike", "postComment"],
+      enum: [
+        "videoLike",
+        "videoComment",
+        "postLike",
+        "postComment",
+        "subscribe",
+      ],
       required: true,
     },
     video: { type: mongoose.Schema.Types.ObjectId, ref: "Video" },
