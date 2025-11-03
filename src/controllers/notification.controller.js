@@ -7,7 +7,6 @@ import { ApiError } from "../utils/ApiError.js"
 // 📬 Get all notifications of the logged-in user
 export const getNotifications = asyncErrorHandler(async (req, res) => {
   const userId = req.user._id;
-
   const notifications = await Notification.find({ reciepent: userId })
     .populate("sender", "username avatar")
     .populate("video", "title thumbnail")
