@@ -30,7 +30,7 @@ import notificationRouter  from "./routes/notificationRoutes.js"
 
 // routes
 app.use("/api/v1/users", userRouter);
-app.use("api/v1/users/notifications",notificationRouter)
+app.use("/api/v1/users/notifications",notificationRouter)
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/users/subscription", subscriptionRouter);
 app.use("/api/v1/likes", likeRouter);
