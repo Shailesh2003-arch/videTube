@@ -328,6 +328,44 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
         as: "subscribedTo",
       },
     },
+    // 🧠 Add videos lookup here!
+    {
+      $lookup: {
+        from: "videos",
+        localField: "_id",
+        foreignField: "videoOwner", // assuming your Video model has 'owner' field referencing User _id
+        as: "videos",
+        pipeline: [
+          {
+            $project: {
+              title: 1,
+              thumbnail: 1,
+              views: 1,
+              duration: 1,
+              createdAt: 1,
+            },
+          },
+        ],
+      },
+    },
+    // Optional: playlists lookup
+    {
+      $lookup: {
+        from: "playlists",
+        localField: "_id",
+        foreignField: "owner",
+        as: "playlists",
+        pipeline: [
+          {
+            $project: {
+              name: 1,
+              description: 1,
+              createdAt: 1,
+            },
+          },
+        ],
+      },
+    },
     {
       $addFields: {
         subscribersCount: { $size: "$subscribers" },
@@ -356,26 +394,49 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
         subscribersCount: 1,
         channelSubscribedToCount: 1,
         isSubscribed: 1,
+        videos: 1,
+        playlists: 1,
       },
     },
   ]);
+
 
   if (!channel?.length) {
     throw new ApiError(404, "Channel does not exist");
   }
 
+  const channelData = channel[0];
+
+  const responseData = {
+    user: {
+      _id: channelData._id,
+      fullName: channelData.fullName,
+      username: channelData.username,
+      email: channelData.email,
+      avatar: channelData.avatar,
+      coverImage: channelData.coverImage,
+      subscribersCount: channelData.subscribersCount,
+      channelSubscribedToCount: channelData.channelSubscribedToCount,
+      isSubscribed: channelData.isSubscribed,
+    },
+    videos: channelData.videos || [],
+    playlists: channelData.playlists || [],
+  };
+
   return res
     .status(200)
     .json(
-      new ApiResponse(200, channel[0], "User channel fetched successfully")
+      new ApiResponse(200, responseData, "User channel fetched successfully")
     );
 });
+
 
 
 // [CLEAN]
 // Update avatar functionality...
 const updateAvatar = asyncErrorHandler(async (req, res) => {
   const existingAvatarURL = req.user.avatar;
+  console.log(existingAvatarURL)
   const parts = existingAvatarURL.split("/upload/")[1];
   const existingAvatarWithExtension = parts.split(".")[0];
   const publicId = existingAvatarWithExtension.replace(/^v\d+\//, "");
