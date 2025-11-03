@@ -21,13 +21,17 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    // avatar: {
-    //   type: String, //cloudinary...
-    //   // required: true,
-    // },
-    // coverImage: {
-    //   type: String, //cloudinary...
-    // },
+    avatar: {
+      type: String, //cloudinary...
+      default:
+        "https://res.cloudinary.com/dzl8thpiy/image/upload/v1762164889/default-avatar.png.png",
+      // required: true,
+    },
+    coverImage: {
+      type: String, //cloudinary...
+      default:
+        "https://res.cloudinary.com/dzl8thpiy/image/upload/v1762185265/default-cover-image_dzq0ae.jpg",
+    },
     watchHistory: [
       {
         video: {
