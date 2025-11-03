@@ -5,7 +5,7 @@ import { getNotifications, markAsRead } from "../controllers/notification.contro
 const router = Router();
 
 
-router.route("/").get(verifyJWT, getNotifications);
+router.route("/all").get(verifyJWT, getNotifications);
 router.route("/:id/read").put(verifyJWT,markAsRead)
 
 
