@@ -355,7 +355,7 @@ const getHomePageVideos = asyncErrorHandler(async (req, res) => {
 const getUserUploadedVideos = asyncErrorHandler(async (req, res) => {
   
   const videos = await Video.find({ videoOwner: req.user._id })
-    .select("title views duration createdAt")
+    .select("title views description duration createdAt")
     .sort({ _id: -1 })
     .lean();
   res
