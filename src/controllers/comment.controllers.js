@@ -5,39 +5,40 @@ import { Comment } from "../models/comments.models.js";
 import { Video } from "../models/videos.models.js";
 
 // add comment on a video...
-const addComment = asyncErrorHandler(async (req, res) => {
-  const { videoId } = req.params;
-  const commentBy = req.user._id;
+const addComment = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const { text } = req.body;
+    const userId = req.user?._id;
 
-  if (!videoId) {
-    throw new ApiError(400, "Video-Id is required");
-  }
-  const video = await Video.findById(videoId);
-  if (!video) {
-    throw new ApiError(404, "Video not found");
-  }
-  const content = req.body.content?.trim();
-  if (!content) {
-    throw new ApiError(400, "Comment content is required");
-  }
-  if (!content.length > 0) {
-    throw new ApiError(400, "Comment must be 1 word atleast");
-  }
+    if (!text?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment cannot be empty",
+      });
+    }
 
-  const newComment = await Comment.create({
-    video: videoId,
-    comment: content,
-    owner: commentBy,
-  });
-  // [AFTER]: add only required data in response object...
-  const newCommentObj = newComment.toObject();
-  delete newCommentObj.__v;
-  delete newCommentObj.updatedAt;
+    const newComment = await Comment.create({ video: videoId, owner: userId, text });
 
-  res
-    .status(201)
-    .json(new ApiResponse(200, newCommentObj, "Comment added successfully"));
-});
+    const populatedComment = await Comment.findById(newComment._id)
+      .populate("owner", "username avatar")
+      .lean();
+
+    res.status(201).json({
+      success: true,
+      message: "Comment added successfully",
+      data: populatedComment, // ✅ changed here
+    });
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to add comment",
+    });
+  }
+};
+
+
 
 // delete the comment from a video
 // [CLEAN]
@@ -83,4 +84,23 @@ const updateComment = asyncErrorHandler(async (req, res) => {
     );
 });
 
-export { addComment, deleteComment, updateComment };
+
+const getVideoComments = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const comments = await Comment.find({ video:videoId })
+      .populate("owner", "username avatar") // get user info
+      .sort({ createdAt: -1 }); // newest first
+return res
+  .status(200)
+  .json(new ApiResponse(200, comments, "Comments fetched succesfully"));
+      } catch (error) {
+    console.error("Error fetching comments:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch comments" });
+  }
+};
+
+
+export { addComment, deleteComment, updateComment, getVideoComments };
