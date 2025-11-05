@@ -3,21 +3,40 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const commentSchema = new Schema(
   {
-    comment: {
+    // the actual comment text
+    text: {
       type: String,
+      required: [true, "Comment text is required"],
+      trim: true,
+    },
+
+    // reference to the video
+    video: {
+      type: Schema.Types.ObjectId,
+      ref: "Video",
       required: true,
     },
-    video: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Video",
-    },
+
+    // reference to the user who commented
     owner: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
+
+    // optional: likes on the comment (can expand later)
+    likes: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );
+
+// add pagination plugin
 commentSchema.plugin(mongooseAggregatePaginate);
 
-export const Comment = new mongoose.model("Comment", commentSchema);
+export const Comment = mongoose.model("Comment", commentSchema);
+
