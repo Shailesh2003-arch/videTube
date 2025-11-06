@@ -3,6 +3,7 @@ import { Subscription } from "../models/subscriptions.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
+import { Notification } from "../models/notification.models.js";
 import mongoose from "mongoose";
 
 // Controller to return the subscriber list of channel
@@ -165,39 +166,89 @@ const getSubscribedChannels = asyncErrorHandler(async (req, res) => {
 const toggleSubscription = asyncErrorHandler(async (req, res) => {
   const { channelId } = req.params;
   const subscriberId = req.user._id;
+
   if (!channelId) {
-    throw new ApiError(400, "Channel Id not found");
-  }
-  // Prevent user from subscribing to themselves
-  if (subscriberId.toString() === channelId.toString()) {
-    throw new ApiError(400, "Cannot subscribe to your own channel");
+    throw new ApiError(400, "Channel ID not provided");
   }
 
+  if (subscriberId.toString() === channelId.toString()) {
+    throw new ApiError(400, "You cannot subscribe to your own channel");
+  }
+
+  // Check if channel (user being subscribed to) exists
+  const channelUser = await User.findById(channelId);
+  if (!channelUser) {
+    throw new ApiError(404, "Channel not found");
+  }
+
+  // Check if subscription already exists
   const existingSubscription = await Subscription.findOne({
     subscriber: subscriberId,
     channel: channelId,
   });
 
   if (existingSubscription) {
-    await Subscription.deleteOne({ _id: existingSubscription._id });
+    // 🧹 Unsubscribe
+    await existingSubscription.deleteOne();
+
+    // 🧾 Decrement subscriber count safely
+    channelUser.subscribersCount = Math.max(
+      (channelUser.subscribersCount || 1) - 1,
+      0
+    );
+    await channelUser.save();
+
+    // 🔕 Remove notification if exists
+    await Notification.deleteMany({
+      sender: subscriberId,
+      reciepent: channelId,
+      type: "subscribe",
+    });
+
     return res
       .status(200)
-      .json(new ApiResponse(200, {}, "Unsubscribed successfully"));
+      .json(
+        new ApiResponse(
+          200,
+          { subscribersCount: channelUser.subscribersCount },
+          "Unsubscribed successfully"
+        )
+      );
   }
 
+  // 💖 Subscribe logic
   const newSubscription = await Subscription.create({
     channel: channelId,
     subscriber: subscriberId,
   });
 
-  // [AFTER]: added only required data to the response object...
-  const newSubscriptionObj = newSubscription.toObject();
-  delete newSubscriptionObj.__v;
-  delete newSubscriptionObj.updatedAt;
+  // 💫 Increment subscriber count
+  channelUser.subscribersCount = (channelUser.subscribersCount || 0) + 1;
+  await channelUser.save();
 
-  res
+  // 🔔 Notify the channel owner
+  if (String(subscriberId) !== String(channelId)) {
+    await Notification.create({
+      type: "subscribe",
+      sender: subscriberId,
+      reciepent: channelId,
+      message: `${req.user.username} subscribed to your channel.`,
+    });
+  }
+
+  // 🧹 Clean response data
+  const responseData = {
+    _id: newSubscription._id,
+    channel: newSubscription.channel,
+    subscriber: newSubscription.subscriber,
+    createdAt: newSubscription.createdAt,
+    subscribersCount: channelUser.subscribersCount,
+  };
+
+  return res
     .status(200)
-    .json(new ApiResponse(200, newSubscriptionObj, "Subscribed successfully"));
+    .json(new ApiResponse(200, responseData, "Subscribed successfully"));
 });
+
 
 export { getChannelSubscribers, getSubscribedChannels, toggleSubscription };
