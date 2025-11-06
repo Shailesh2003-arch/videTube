@@ -1,7 +1,8 @@
 import mongoose, { Schema } from "mongoose";
 
-const likesSchema = new Schema(
+const likeSchema = new Schema(
   {
+    // Either a video or a comment will be referenced, never both.
     video: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Video",
@@ -10,36 +11,33 @@ const likesSchema = new Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Comment",
     },
-    tweet: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Tweet",
-    },
+
     likedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
     },
+
+    // Type of reaction
     type: {
       type: String,
       enum: ["like", "dislike"],
-      default: "like",
+      required: true,
     },
   },
   { timestamps: true }
 );
 
-
-// ensure one reaction per user per target
-likesSchema.index(
-  { likedBy: 1, video: 1 },
-  { unique: true, partialFilterExpression: { video: { $exists: true } } }
-);
-likesSchema.index(
+// 🔐 Ensure one reaction (like/dislike) per user per comment
+likeSchema.index(
   { likedBy: 1, comment: 1 },
   { unique: true, partialFilterExpression: { comment: { $exists: true } } }
 );
-likesSchema.index(
-  { likedBy: 1, tweet: 1 },
-  { unique: true, partialFilterExpression: { tweet: { $exists: true } } }
+
+// 🔐 Ensure one reaction (like/dislike) per user per video
+likeSchema.index(
+  { likedBy: 1, video: 1 },
+  { unique: true, partialFilterExpression: { video: { $exists: true } } }
 );
 
-export const Like = mongoose.model("Like", likesSchema);
+export const Like = mongoose.model("Like", likeSchema);
