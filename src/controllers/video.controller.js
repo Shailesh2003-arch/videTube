@@ -142,7 +142,7 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
 
   const video = await Video.findById(videoId).populate(
     "videoOwner",
-    "username avatar fullName"
+    "username avatar fullName subscribersCount"
   );
   if (!video) throw new ApiError(404, "Video not found");
 
