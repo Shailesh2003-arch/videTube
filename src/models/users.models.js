@@ -32,6 +32,10 @@ const userSchema = new Schema(
       default:
         "https://res.cloudinary.com/dzl8thpiy/image/upload/v1762185265/default-cover-image_dzq0ae.jpg",
     },
+    subscribersCount: {
+      type: Number,
+      default: 0,
+    },
     watchHistory: [
       {
         video: {
