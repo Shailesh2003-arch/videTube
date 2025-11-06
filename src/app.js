@@ -26,7 +26,8 @@ import playlistRouter from "./routes/playlistRoutes.js";
 import likeRouter from "./routes/likeRoutes.js";
 import commentRouter from "./routes/commentRoutes.js";
 import tweetRouter from "./routes/tweetRoutes.js";
-import notificationRouter  from "./routes/notificationRoutes.js"
+import notificationRouter from "./routes/notificationRoutes.js"
+import commentReplyRouter from "./routes/commentReplyRoutes.js"
 
 // routes
 app.use("/api/v1/users", userRouter);
@@ -35,6 +36,7 @@ app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/users/subscription", subscriptionRouter);
 app.use("/api/v1/likes", likeRouter);
 app.use("/api/v1/comments", commentRouter);
+app.use("/api/v1/reply",commentReplyRouter)
 app.use("/api/v1/users/tweets", tweetRouter);
 app.use("/api/v1/users/playlist", playlistRouter);
 
