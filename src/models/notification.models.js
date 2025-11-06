@@ -19,6 +19,7 @@ const notificationSchema = new Schema(
         "videoComment",
         // "postLike",
         "commentLike",
+        "commentDislike",
         // "postComment",
         "subscribe",
       ],
