@@ -105,15 +105,26 @@ const updateComment = asyncErrorHandler(async (req, res) => {
 const getVideoComments = async (req, res) => {
   try {
     const { videoId } = req.params;
-    const comments = await Comment.find({ video:videoId })
-      .populate("owner", "username avatar") // get user info
-      .sort({ createdAt: -1 }); // newest first
-return res
-  .status(200)
-  .json(new ApiResponse(200, comments, "Comments fetched succesfully"));
-      } catch (error) {
+
+    const comments = await Comment.find({ video: videoId })
+      .populate("owner", "username avatar")
+      .sort({ createdAt: -1 });
+
+    // Transform comments to include counts and any future computed fields
+    const formattedComments = comments.map((comment) => ({
+      ...comment.toObject(),
+      likesCount: comment.likes?.length || 0,
+      dislikesCount: comment.dislikes?.length || 0,
+    }));
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, formattedComments, "Comments fetched successfully")
+      );
+  } catch (error) {
     console.error("Error fetching comments:", error);
-    res
+    return res
       .status(500)
       .json({ success: false, message: "Failed to fetch comments" });
   }
@@ -222,25 +233,42 @@ const dislikeComment = asyncErrorHandler(async (req, res) => {
   const { commentId } = req.params;
   const userId = req.user._id;
 
+  console.log(`Dislike action triggered on comment: ${commentId}`);
+
+  // Step 1: Fetch the comment and owner
   const comment = await Comment.findById(commentId).populate(
     "owner",
     "username"
   );
   if (!comment) throw new ApiError(404, "Comment not found");
 
+  // Step 2: Determine the current reaction state
   const alreadyDisliked = comment.dislikes.includes(userId);
   const alreadyLiked = comment.likes.includes(userId);
 
+  // Step 3: Handle toggling logic
   if (alreadyDisliked) {
-    // Remove dislike
+    // If already disliked, remove it
     comment.dislikes.pull(userId);
   } else {
-    // Add dislike
+    // Add new dislike
     comment.dislikes.push(userId);
-    // Remove like if it existed
+    // Remove existing like if present
     if (alreadyLiked) comment.likes.pull(userId);
+
+    // Optional: send notification (only if not self-dislike)
+    if (String(comment.owner._id) !== String(userId)) {
+      await Notification.create({
+        type: "commentDislike",
+        sender: userId,
+        reciepent: comment.owner._id,
+        comment: comment._id,
+        message: `${req.user.username} disliked your comment.`,
+      });
+    }
   }
 
+  // Step 4: Save and respond
   await comment.save();
 
   res.status(200).json(
@@ -251,6 +279,7 @@ const dislikeComment = asyncErrorHandler(async (req, res) => {
     })
   );
 });
+
 
 
 
