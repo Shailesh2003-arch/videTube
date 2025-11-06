@@ -31,6 +31,14 @@ const commentSchema = new Schema(
         ref: "User",
       },
     ],
+
+    dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    replies: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Reply",
+      },
+    ],
   },
   { timestamps: true }
 );
