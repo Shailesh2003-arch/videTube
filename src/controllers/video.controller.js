@@ -144,6 +144,7 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
     "videoOwner",
     "username avatar fullName subscribersCount"
   );
+
   if (!video) throw new ApiError(404, "Video not found");
 
   const user = await User.findById(userId);
@@ -170,7 +171,7 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
     user.watchHistory.push({ video: videoId, watchedAt: now });
   }
 
-  // ✅ Save both in sync
+  // ✅ Update view count + watch history
   if (shouldIncrementView) {
     video.views += 1;
 
@@ -185,19 +186,25 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
       newCount: video.views,
     });
   } else {
-    // even if view didn’t increment, update watch timestamp
     await user.save({ validateBeforeSave: false });
   }
 
+  // ✅ Count subscribers, likes, and dislikes
   const subscriberCount = await Subscription.countDocuments({
     channel: video.videoOwner._id,
   });
 
-  const likeCount = await Like.countDocuments({ video: videoId, type:"like"});
-const dislikeCount = await Like.countDocuments({
-  video: videoId,
-  type: "dislike",
-});
+  const likeCount = await Like.countDocuments({ video: videoId, type: "like" });
+  const dislikeCount = await Like.countDocuments({
+    video: videoId,
+    type: "dislike",
+  });
+
+  // ✅ Check if the current user is subscribed to this channel
+  const isSubscribed = await Subscription.exists({
+    subscriber: userId,
+    channel: video.videoOwner._id,
+  });
 
   const videoData = {
     ...video._doc,
@@ -207,6 +214,7 @@ const dislikeCount = await Like.countDocuments({
     },
     likeCount,
     dislikeCount,
+    isSubscribed: !!isSubscribed, // 👈 ensures boolean value
   };
 
   delete videoData.__v;
@@ -216,6 +224,7 @@ const dislikeCount = await Like.countDocuments({
     .status(200)
     .json(new ApiResponse(200, videoData, "Video fetched successfully"));
 });
+
 
 
 
