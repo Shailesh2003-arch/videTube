@@ -30,7 +30,7 @@ router
 router
   .route("/update-coverImage")
   .patch(verifyJWT, upload.single("coverImage"), updateCoverImage);
-router.route("/reset-password").patch(verifyJWT, changeCurrentPassword);
+router.route("/change-password").patch(verifyJWT, changeCurrentPassword);
 
 router.route("/watch-history").get(verifyJWT, getUserWatchHistory);
 router.route("/:username").get(verifyJWT, getUserChannelProfile);
