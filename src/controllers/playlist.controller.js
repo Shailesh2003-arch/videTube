@@ -125,7 +125,18 @@ const getPlaylistById = asyncErrorHandler(async (req, res) => {
 
   // find playlist and populate videos with required fields
   const playlist = await Playlist.findById(playlistId)
-    .populate("videos", "title description thumbnail duration") // only required fields
+    .populate({
+      path: "owner",
+      select: "fullName username avatar",
+    })
+    .populate({
+      path: "videos",
+      select: "title description thumbnail duration views createdAt",
+      populate: {
+        path: "videoOwner",
+        select: "fullName username avatar",
+      },
+    })
     .select("-__v -updatedAt"); // extra cleanup if you want
 
   if (!playlist) {
