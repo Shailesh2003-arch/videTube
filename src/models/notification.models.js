@@ -1,4 +1,4 @@
-import mongoose, { mongo, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const notificationSchema = new Schema(
   {
@@ -17,17 +17,15 @@ const notificationSchema = new Schema(
       enum: [
         "videoLike",
         "videoComment",
-        // "postLike",
         "commentLike",
         "commentDislike",
-        // "postComment",
+        "NEW_VIDEO",
         "subscribe",
       ],
       required: true,
     },
     video: { type: mongoose.Schema.Types.ObjectId, ref: "Video" },
     comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
-    // tweet: { type: mongoose.Schema.Types.ObjectId, ref: "Tweet" },
     message: { type: String },
     isRead: { type: Boolean, default: false },
   },
