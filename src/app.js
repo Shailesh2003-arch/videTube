@@ -11,6 +11,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://vid-tube-frontend-svbk.vercel.app",
+      "https://vid-tube-frontend-svbk-lnamrpecm-shailesh2003-archs-projects.vercel.app",
     ],
     credentials: true,
   })
