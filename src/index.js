@@ -43,9 +43,7 @@ io.on("connection", (socket) => {
 connectDB()
   .then(() => {
     httpServer.listen(PORT, "0.0.0.0", () => {
-      console.log(
-        `Server listening to requests on Port ${process.env.PORT}...`
-      );
+      console.log(`Server listening to requests on Port ${PORT}...`);
     });
   })
   .catch((error) => {
