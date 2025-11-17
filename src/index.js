@@ -13,7 +13,10 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: [
+      "http://localhost:5173", // for local dev
+      "https://vid-tube-frontend-svbk.vercel.app", // your deployed frontend
+    ],
     credentials: true,
   },
 });
