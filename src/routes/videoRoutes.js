@@ -9,6 +9,7 @@ import {
   getAllVideos,
   getHomePageVideos,
   getUserUploadedVideos,
+  getLikedVideos,
 } from "../controllers/video.controller.js";
 
 const router = Router();
@@ -31,9 +32,8 @@ router.route("/upload").post(
 
 router.route("/user").get(getUserUploadedVideos);
 
-// FIXME: Iska route dekhlena inside postman...
-
 router.route("/").get(getAllVideos);
+router.route("/liked").get(getLikedVideos);
 router.route("/homepage").get(getHomePageVideos);
 router.route("/vId/:videoId").get(getVideoById);
 router
