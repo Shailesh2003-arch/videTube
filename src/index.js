@@ -2,14 +2,14 @@ import dotenv from "dotenv";
 dotenv.config({ path: "./src/.env" });
 import connectDB from "./db/index.js";
 import { createServer } from "http";
-import { Server } from "socket.io"
+import { Server } from "socket.io";
 
 const hostname = "127.0.0.1";
-import {  app } from "./app.js";
+import { app } from "./app.js";
 
+const PORT = process.env.PORT || 4000;
 
 const httpServer = createServer(app);
-
 
 const io = new Server(httpServer, {
   cors: {
@@ -40,10 +40,9 @@ io.on("connection", (socket) => {
   });
 });
 
-
 connectDB()
   .then(() => {
-    httpServer.listen(process.env.PORT, hostname, () => {
+    httpServer.listen(PORT, hostname, () => {
       console.log(
         `Server listening to requests on Port ${process.env.PORT}...`
       );
