@@ -43,6 +43,11 @@ app.use("/api/v1/users/tweets", tweetRouter);
 app.use("/api/v1/playlists", playlistRouter);
 
 // error handler
+
+app.get("/", (req, res) => {
+  res.send("Videtube backend is live 🚀");
+});
+
 app.use((err, req, res, next) => {
   res.status(err.statusCode || 500).json({
     success: false,
