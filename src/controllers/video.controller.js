@@ -3,13 +3,15 @@ import { Video } from "../models/videos.models.js";
 import { asyncErrorHandler } from "../utils/asyncErrorHandler.js";
 import { Subscription } from "../models/subscriptions.models.js";
 import { User } from "../models/users.models.js";
-import { Like }  from "../models/likes.models.js"
+import { Like } from "../models/likes.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { v2 as cloudinary } from "cloudinary";
 import { uploadOnCloudinary } from "../services/cloudinary.js";
 import getPublicIdFromUrl from "../utils/extractPublicUrl.js";
 import { Playlist } from "../models/playlist.models.js";
+import { Notification } from "../models/notification.models.js";
+import { io } from "../index.js";
 
 // Controller for getting all video based on query, sort, pagination...
 
@@ -125,6 +127,37 @@ const publishAVideo = asyncErrorHandler(async (req, res) => {
     duration: durationInMinutes,
     videoOwner: req.user?._id,
   });
+
+  // 4️⃣ Fetch all subscribers of this creator
+  const subscribers = await Subscription.find({ channel: req.user._id }).select(
+    "subscriber"
+  );
+
+  // 5️⃣ Create notifications for all subscribers
+  if (subscribers.length > 0) {
+    const notificationDocs = subscribers.map((sub) => ({
+      reciepent: sub.subscriber,
+      sender: `${req.user._id}`,
+      type: "NEW_VIDEO",
+      message: `${req.user.username} uploaded a new video: "${title}"`,
+      videoId: video._id,
+      seen: false,
+    }));
+
+    // save all in bulk
+    await Notification.insertMany(notificationDocs);
+
+    // 6️⃣ Emit real-time socket events to all online subscribers
+    subscribers.forEach((sub) => {
+      io.to(sub.subscriber.toString()).emit("newNotification", {
+        sender: req.user.username,
+        videoTitle: title,
+        videoId: video._id,
+        thumbnail: uploadedThumbnail.url,
+      });
+    });
+  }
+
   // [AFTER]:Here we are just passing needed fields of created video in the response and corrected status code from 200 to 201...
   const videoObj = video.toObject();
   delete videoObj.updatedAt;
@@ -225,8 +258,93 @@ const getVideoById = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, videoData, "Video fetched successfully"));
 });
 
+// const getVideoById = asyncErrorHandler(async (req, res) => {
+//   const userId = req.user._id;
+//   const { videoId } = req.params;
 
+//   const video = await Video.findById(videoId).populate(
+//     "videoOwner",
+//     "username avatar fullName subscribersCount"
+//   );
 
+//   if (!video) throw new ApiError(404, "Video not found");
+
+//   const user = await User.findById(userId);
+//   if (!user) throw new ApiError(404, "User not found");
+
+//   const now = new Date();
+//   const THIRTY_MINUTES = 30 * 60 * 1000;
+
+//   // ✅ Check if the user has already watched this video in last 30 min
+//   const recentView = await VideoView.findOne({
+//     user: userId,
+//     video: videoId,
+//     watchedAt: { $gte: new Date(Date.now() - THIRTY_MINUTES) },
+//   });
+
+//   if (!recentView) {
+//     // Record the new view
+//     await VideoView.create({
+//       viewer: userId,
+//       video: videoId,
+//       watchedAt: now,
+//       creator: video.videoOwner._id,
+//     });
+
+//     // Increment video views
+//     video.views += 1;
+//     await video.save({ validateBeforeSave: false });
+
+//     // Emit socket event
+//     io.to(videoId).emit("viewCountUpdated", { videoId, newCount: video.views });
+//   }
+
+//   // ✅ Update user's watch history for UI (no duplicates)
+//   const existingIndex = user.watchHistory.findIndex((entry) =>
+//     entry.video.equals(videoId)
+//   );
+//   if (existingIndex !== -1) {
+//     user.watchHistory[existingIndex].watchedAt = now;
+//   } else {
+//     user.watchHistory.push({ video: videoId, watchedAt: now });
+//   }
+//   await user.save({ validateBeforeSave: false });
+
+//   // ✅ Count subscribers, likes, and dislikes
+//   const subscriberCount = await Subscription.countDocuments({
+//     channel: video.videoOwner._id,
+//   });
+
+//   const likeCount = await Like.countDocuments({ video: videoId, type: "like" });
+//   const dislikeCount = await Like.countDocuments({
+//     video: videoId,
+//     type: "dislike",
+//   });
+
+//   // ✅ Check if the current user is subscribed to this channel
+//   const isSubscribed = await Subscription.exists({
+//     subscriber: userId,
+//     channel: video.videoOwner._id,
+//   });
+
+//   const videoData = {
+//     ...video._doc,
+//     videoOwner: {
+//       ...video.videoOwner._doc,
+//       subscriberCount,
+//     },
+//     likeCount,
+//     dislikeCount,
+//     isSubscribed: !!isSubscribed, // ensures boolean
+//   };
+
+//   delete videoData.__v;
+//   delete videoData.updatedAt;
+
+//   res
+//     .status(200)
+//     .json(new ApiResponse(200, videoData, "Video fetched successfully"));
+// });
 
 // Controller for updating the details of the video such as it's title, description, and thumbnail file.
 const updateVideoDetails = asyncErrorHandler(async (req, res) => {
@@ -335,8 +453,8 @@ const getHomePageVideos = asyncErrorHandler(async (req, res) => {
     .populate("videoOwner", "username avatar")
     .sort({ _id: -1 })
     .limit(parsedLimit + 1)
-    .lean(); 
-  
+    .lean();
+
   if (videos.length === 0) {
     return res.status(200).json({
       success: true,
@@ -348,12 +466,12 @@ const getHomePageVideos = asyncErrorHandler(async (req, res) => {
   }
 
   let nextCursor = null;
-   const hasNextPage = videos.length > parsedLimit;
+  const hasNextPage = videos.length > parsedLimit;
 
-   if (hasNextPage) {
-     nextCursor = videos[parsedLimit]._id;
-     videos = videos.slice(0, parsedLimit);
-   }
+  if (hasNextPage) {
+    nextCursor = videos[parsedLimit]._id;
+    videos = videos.slice(0, parsedLimit);
+  }
   res.status(200).json({
     success: true,
     videos,
@@ -362,7 +480,6 @@ const getHomePageVideos = asyncErrorHandler(async (req, res) => {
 });
 
 const getUserUploadedVideos = asyncErrorHandler(async (req, res) => {
-  
   const videos = await Video.find({ videoOwner: req.user._id })
     .select("title views description duration createdAt")
     .sort({ _id: -1 })
@@ -370,6 +487,29 @@ const getUserUploadedVideos = asyncErrorHandler(async (req, res) => {
   res
     .status(200)
     .json(new ApiResponse(200, videos, "Videos fetched successfully"));
+});
+
+const getLikedVideos = asyncErrorHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Find all likes made by the user and populate video + its owner (creator)
+  const liked = await Like.find({ likedBy: userId })
+    .populate({
+      path: "video",
+      populate: { path: "videoOwner", select: "username avatar" },
+    })
+    .sort({ createdAt: -1 });
+
+  // Filter out nulls (in case video was deleted)
+  const likedVideos = liked
+    .map((item) => item.video)
+    .filter((video) => video !== null);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, likedVideos, "Liked videos fetched successfully")
+    );
 });
 
 export {
@@ -380,4 +520,5 @@ export {
   getAllVideos,
   getHomePageVideos,
   getUserUploadedVideos,
+  getLikedVideos,
 };
