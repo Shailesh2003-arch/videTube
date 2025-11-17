@@ -143,10 +143,10 @@ const generateAccessAndRefreshTokens = async (userId) => {
   }
 };
 
-
 // [CLEAN]
 // logout functionality...
 const logoutUser = asyncErrorHandler(async (req, res) => {
+  // 1️⃣ Invalidate refresh token in DB
   await User.findByIdAndUpdate(
     req.user._id,
     {
@@ -154,15 +154,18 @@ const logoutUser = asyncErrorHandler(async (req, res) => {
     },
     { new: true }
   );
-  const options = {
+
+  // 2️⃣ Clear cookies from browser
+  const cookieOptions = {
     httpOnly: true,
     secure: true,
+    sameSite: "None", // important if frontend runs on a different domain
   };
 
- await res
+  res
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged out"));
 });
 
@@ -248,14 +251,16 @@ const changeCurrentPassword = asyncErrorHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
 
-
 // [CLEAN]
 // get currently logged-in user...
 const getCurrentUser = asyncErrorHandler(async (req, res) => {
-  const loggedInUser = req.user;
-  res
+  const user = await User.findById(req.user._id).select("-password");
+  if (!user) {
+    return res.status(404).json(new ApiResponse(404, null, "User not found"));
+  }
+  return res
     .status(200)
-    .json(new ApiResponse(200, loggedInUser, "User fetched Successfully"));
+    .json(new ApiResponse(200, user, "Fetched current user successfully"));
 });
 
 // [CLEAN]
@@ -267,35 +272,41 @@ const updateExistingDetailsOfUser = asyncErrorHandler(async (req, res) => {
     throw new ApiError(400, "At least one field is required to update");
   }
 
-  const user = await User.findById(req.user?._id);
+  if (fullName === "" || email === "") {
+    throw new ApiError(400, "Fields cannot be empty");
+  }
+
+  const user = await User.findById(req.user._id);
   if (!user) {
     throw new ApiError(404, "User not found");
   }
 
-  // Check for duplicate email
+  // Email change handling
   if (email && email !== user.email) {
     const existingUser = await User.findOne({ email });
+
     if (
       existingUser &&
       existingUser._id.toString() !== req.user._id.toString()
     ) {
       throw new ApiError(409, "Email is already taken");
     }
+
     user.email = email;
   }
 
-  if (fullName) user.fullName = fullName;
+  if (fullName) {
+    user.fullName = fullName;
+  }
 
   await user.save({ validateBeforeSave: false });
-  const updatedUser = await User.findById(user._id).select("-password");
+
+  user.password = undefined;
 
   res
     .status(200)
-    .json(
-      new ApiResponse(200, updatedUser, "Account details updated successfully")
-    );
+    .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
-
 
 // [CLEAN]
 // getUserChannelProfile
@@ -361,6 +372,8 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
               name: 1,
               description: 1,
               createdAt: 1,
+              videos: 1,
+              thumbnail: "$thumbnail.url",
             },
           },
         ],
@@ -400,7 +413,6 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
     },
   ]);
 
-
   if (!channel?.length) {
     throw new ApiError(404, "Channel does not exist");
   }
@@ -430,13 +442,11 @@ const getUserChannelProfile = asyncErrorHandler(async (req, res) => {
     );
 });
 
-
-
 // [CLEAN]
 // Update avatar functionality...
 const updateAvatar = asyncErrorHandler(async (req, res) => {
   const existingAvatarURL = req.user.avatar;
-  console.log(existingAvatarURL)
+  console.log(existingAvatarURL);
   const parts = existingAvatarURL.split("/upload/")[1];
   const existingAvatarWithExtension = parts.split(".")[0];
   const publicId = existingAvatarWithExtension.replace(/^v\d+\//, "");
@@ -493,68 +503,69 @@ const updateCoverImage = asyncErrorHandler(async (req, res) => {
 
 // [AFTER]: fixed
 const getUserWatchHistory = asyncErrorHandler(async (req, res) => {
- const userWatchHistory = await User.aggregate([
-   {
-     $match: {
-       _id: new mongoose.Types.ObjectId(req.user._id),
-     },
-   },
-   {
-     $unwind: "$watchHistory",
-   },
-   {
-     $lookup: {
-       from: "videos",
-       localField: "watchHistory.video",
-       foreignField: "_id",
-       as: "videoDetails",
-     },
-   },
-   {
-     $unwind: {
-       path: "$videoDetails",
-       preserveNullAndEmptyArrays: true, // 💡 keeps entries even if video not found
-     },
-   },
-   {
-     $lookup: {
-       from: "users",
-       localField: "videoDetails.videoOwner",
-       foreignField: "_id",
-       as: "videoDetails.owner",
-     },
-   },
-   {
-     $unwind: {
-       path: "$videoDetails.owner",
-      //  preserveNullAndEmptyArrays: true, // 💡 same for owner
-     },
-   },
-   {
-     $project: {
-       _id: 0,
-       watchedAt: "$watchHistory.watchedAt",
-       createdAt: "$videoDetails.createdAt",
-       video: {
-         _id: "$videoDetails._id",
-         title: "$videoDetails.title",
-         thumbnail: "$videoDetails.thumbnail",
-         duration: "$videoDetails.duration",
-         views: "$videoDetails.views",
-         owner: {
-           _id: "$videoDetails.owner._id",
-           fullName: "$videoDetails.owner.fullName",
-           username: "$videoDetails.owner.username",
-           avatar: "$videoDetails.owner.avatar",
-         },
-       },
-     },
-   },
-   {
-     $sort: { watchedAt: -1 },
-   },
- ]);
-  
+  console.log(`Called watch History controller`);
+  const userWatchHistory = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      $unwind: "$watchHistory",
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory.video",
+        foreignField: "_id",
+        as: "videoDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$videoDetails",
+        preserveNullAndEmptyArrays: true, // 💡 keeps entries even if video not found
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "videoDetails.videoOwner",
+        foreignField: "_id",
+        as: "videoDetails.owner",
+      },
+    },
+    {
+      $unwind: {
+        path: "$videoDetails.owner",
+        //  preserveNullAndEmptyArrays: true, // 💡 same for owner
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        watchedAt: "$watchHistory.watchedAt",
+        createdAt: "$videoDetails.createdAt",
+        video: {
+          _id: "$videoDetails._id",
+          title: "$videoDetails.title",
+          thumbnail: "$videoDetails.thumbnail",
+          duration: "$videoDetails.duration",
+          views: "$videoDetails.views",
+          owner: {
+            _id: "$videoDetails.owner._id",
+            fullName: "$videoDetails.owner.fullName",
+            username: "$videoDetails.owner.username",
+            avatar: "$videoDetails.owner.avatar",
+          },
+        },
+      },
+    },
+    {
+      $sort: { watchedAt: -1 },
+    },
+  ]);
+
   return res
     .status(200)
     .json(
