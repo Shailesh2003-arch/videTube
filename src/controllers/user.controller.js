@@ -102,6 +102,8 @@ const loginUser = asyncErrorHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "none", // REQUIRED for cross-domain
+    path: "/", // REQUIRED
   };
   return res
     .status(200)
@@ -195,6 +197,8 @@ const refreshAccessToken = asyncErrorHandler(async (req, res) => {
     const options = {
       httpOnly: true,
       secure: true,
+      sameSite: "none",
+      path: "/",
     };
 
     const { accessToken, refreshToken: newRefreshToken } =
