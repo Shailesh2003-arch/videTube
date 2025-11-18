@@ -161,7 +161,8 @@ const logoutUser = asyncErrorHandler(async (req, res) => {
   const cookieOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: "None", // important if frontend runs on a different domain
+    sameSite: "none",
+    path: "/", // important if frontend runs on a different domain
   };
 
   res
