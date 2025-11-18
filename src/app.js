@@ -10,7 +10,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://vid-tube-b17z0j246-shailesh2003-archs-projects.vercel.app",
+      "https://vid-tube-expgr8qla-shailesh2003-archs-projects.vercel.app",
     ],
     credentials: true,
   })
