@@ -15,7 +15,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: [
       "http://localhost:5173", // for local dev
-      "https://vid-tube-fnrqvubch-shailesh2003-archs-projects.vercel.app",
+      "https://vid-tube-172xasy7g-shailesh2003-archs-projects.vercel.app",
       // your deployed frontend
     ],
     credentials: true,
