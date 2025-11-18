@@ -8,10 +8,7 @@ const app = express();
 // middlewares
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://vid-tube-172xasy7g-shailesh2003-archs-projects.vercel.app",
-    ],
+    origin: ["http://localhost:5173", "https://vid-tube-amber-tau.vercel.app"],
     credentials: true,
   })
 );
